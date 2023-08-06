@@ -1,0 +1,12 @@
+{
+  "name": "punches",
+  "version": "0.1.0",
+  "description": "make consistent progress toward your goal",
+  "main": "index.js",
+  "scripts": {
+    "fe:dev": "pnpm -F=frontend dev"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC"
+}
