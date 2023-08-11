@@ -2,6 +2,8 @@ import { useState } from 'react'
 import Head from 'next/head'
 import dayjs from 'dayjs'
 
+import { wallet } from '@/utils/wallet'
+
 const GOAL_MAX_CHARS = 50
 
 export default function Home() {
@@ -22,6 +24,15 @@ export default function Home() {
 
   const onSubmit = (evt: React.FormEvent<HTMLFormElement>) => {
     evt.preventDefault()
+    wallet
+      .requestPermissions({
+        network: {
+          // @ts-ignore
+          type: 'ghostnet',
+        },
+      })
+      .then((_) => wallet.getPKH())
+      .then((address) => console.log(`Your address: ${address}`));
   }
 
   return (
@@ -34,8 +45,8 @@ export default function Home() {
       <div>
         <form onSubmit={onSubmit}>
           <label className="flex flex-col mb-12">
-            <span className="mb-2 pl-2 border-l-4 border-l-yellow-400 border-solid text-lg">
-              What is your goal?{" "}{goalTouched && <small>({goal.length}/{GOAL_MAX_CHARS})</small>}
+            <span className="mb-2 pl-2 border-l-4 border-l-yellow-400 border-solid text-lg flex align-center">
+              What is your goal?&nbsp;{goalTouched && <small>({goal.length}/{GOAL_MAX_CHARS})</small>}
             </span>
             <input
               className="bg-transparent outline-none border-yellow-400 border-dashed border-l-4 px-2 py-1"
@@ -97,7 +108,7 @@ export default function Home() {
             className={`px-2 py-1 border-2 ${isFormReady ? " border-yellow-400 text-yellow-400" : ""}`}
             disabled={!isFormReady}
           >
-            proceed
+            let's do this
           </button>
         </form>
       </div>
