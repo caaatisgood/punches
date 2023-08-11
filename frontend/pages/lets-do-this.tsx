@@ -40,7 +40,7 @@ export default function Home() {
       className={`flex min-h-screen flex-col items-center justify-center p-4`}
     >
       <Head>
-        <title>punches | make consistent progress toward your goal.</title>
+        <title>let’s do this | punches</title>
       </Head>
       <div>
         <form onSubmit={onSubmit}>
@@ -108,7 +108,7 @@ export default function Home() {
             className={`px-2 py-1 border-2 ${isFormReady ? " border-yellow-400 text-yellow-400" : ""}`}
             disabled={!isFormReady}
           >
-            let's do this
+            let’s do this
           </button>
         </form>
       </div>
