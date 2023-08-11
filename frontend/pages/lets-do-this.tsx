@@ -2,7 +2,7 @@ import { useState } from 'react'
 import Head from 'next/head'
 import dayjs from 'dayjs'
 
-import { wallet } from '@/utils/wallet'
+import { getWallet } from '@/utils/wallet'
 
 const GOAL_MAX_CHARS = 50
 
@@ -24,6 +24,7 @@ export default function Home() {
 
   const onSubmit = (evt: React.FormEvent<HTMLFormElement>) => {
     evt.preventDefault()
+    const wallet = getWallet()
     wallet
       .requestPermissions({
         network: {
