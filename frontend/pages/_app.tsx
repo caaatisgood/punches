@@ -14,10 +14,9 @@ const novaMono = Nova_Mono({
   variable: '--font-nova-mono'
 })
 
-
 export default function App({ Component, pageProps }: AppProps) {
   return (
-    <main className={`${novaSlim.className} ${novaMono.className}`}>
+    <main className={`${novaSlim.variable} ${novaMono.variable}`}>
       <Component {...pageProps} />
     </main>
   )
