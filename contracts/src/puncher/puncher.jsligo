@@ -31,7 +31,7 @@ type Return = [list<operation>, Storage];
 const setGoal = ({ admin, tickets, goals }: Storage, goal: string): Storage => {
   const sender = Tezos.get_sender();
   const goalMap: map<GoalId, Goal> = match((Big_map.find_opt(sender, goals)), {
-    Some: (goalsMap: map<GoalId, Goal>) => goalsMap,
+    Some: (goalMap: map<GoalId, Goal>) => goalMap,
     None: () => (Map.empty as map<GoalId, Goal>),
   });
   const id: nat = Map.size(goalMap);
@@ -55,19 +55,25 @@ const setGoal = ({ admin, tickets, goals }: Storage, goal: string): Storage => {
 };
 
 const updateGoal = ({ admin, tickets, goals }: Storage, { goal, id }: { goal: string, id: nat }): Storage => {
-  // const sender = Tezos.get_sender();
-  // const currentGoals: list<Goal> = match((Big_map.find_opt(sender, goals)), {
-  //   Some: (goals: list<Goal>) => goals,
-  //   None: () => failwith("NOT_FOUND"),
-  // });
-  // if (id >= List.length(currentGoals)) {
-  //   failwith("NOT_FOUND");
-  // }
-
+  const sender = Tezos.get_sender();
+  const goalMap: map<GoalId, Goal> = match((Big_map.find_opt(sender, goals)), {
+    Some: (goalMap: map<GoalId, Goal>) => goalMap,
+    None: () => failwith("NOT_FOUND"),
+  });
+  const goalObj: Goal = match((Map.find_opt(id, goalMap)), {
+    Some: (goalObj: Goal) => goalObj,
+    None: () => failwith("NOT_FOUND"),
+  });
+  const updatedGoalMap = Map.update(id, Some({ ...goalObj, goal }), goalMap);
+  const updatedGoals = Big_map.update(
+    sender,
+    Some(updatedGoalMap),
+    goals
+  );
   return {
     admin,
     tickets,
-    goals,
+    goals: updatedGoals,
   };
 };
 
