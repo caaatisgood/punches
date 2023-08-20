@@ -14,23 +14,29 @@ type TokenData = big_map<nat, {
 }>;
 
 type Storage = {
-  admin: address,
   token_count: nat,
   tickets: big_map<nat, ticket<nat>>,
   goals: big_map<address, map<GoalId, Goal>>,
+  goal_chars: nat,
+  note_chars: nat,
+  admin: address,
 };
 
 type Parameter =
+  // permissionless
   | ["Set_Goal", string]
   | ["Update_Goal", { goal: string, id: GoalId }]
   | ["Punch", { note: string, id: GoalId }]
   | ["Activate_Goal", GoalId]
-  | ["Deactivate_Goal", GoalId];
+  | ["Deactivate_Goal", GoalId]
+  // admin
+  | ["Update_Goal_Chars", nat]
+  | ["Update_Note_Chars", nat];
 
 type Return = [list<operation>, Storage];
 
 const setGoal = (
-  { admin, token_count, tickets, goals }: Storage,
+  { token_count, tickets, goals, admin, goal_chars, note_chars }: Storage,
   goal: string
 ): Storage => {
   const sender = Tezos.get_sender();
@@ -52,16 +58,11 @@ const setGoal = (
     Some(updatedGoalMap),
     goals
   );
-  return {
-    admin,
-    token_count,
-    tickets,
-    goals: updatedGoals,
-  };
+  return { token_count, tickets, goals: updatedGoals, admin, goal_chars, note_chars };
 };
 
 const updateGoal = (
-  { admin, token_count, tickets, goals }: Storage,
+  { token_count, tickets, goals, admin, goal_chars, note_chars }: Storage,
   { goal, id }: { goal: string, id: nat }
 ): Storage => {
   const sender = Tezos.get_sender();
@@ -76,11 +77,11 @@ const updateGoal = (
   // TODO: check goal length
   const updatedGoalMap = Map.update(id, Some({ ...goalObj, goal }), goalMap);
   const updatedGoals = Big_map.update(sender, Some(updatedGoalMap), goals);
-  return { admin, token_count, tickets, goals: updatedGoals };
+  return { token_count, tickets, goals: updatedGoals, admin, goal_chars, note_chars };
 };
 
 const punch = (
-  { admin, token_count, tickets, goals }: Storage,
+  { token_count, tickets, goals, admin, goal_chars, note_chars }: Storage,
   { note, id }: { note: string, id: GoalId }
 ): Storage => {
   const sender = Tezos.get_sender();
@@ -105,15 +106,17 @@ const punch = (
   );
   const updatedGoals = Big_map.update(sender, Some(updatedGoalMap), goals);
   return {
-    admin,
     token_count: ticketId,
     tickets: updatedTickets,
     goals: updatedGoals,
+    admin,
+    goal_chars,
+    note_chars,
   };
 };
 
 const activateGoal = (
-  { admin, token_count, tickets, goals }: Storage,
+  { token_count, tickets, goals, admin, goal_chars, note_chars }: Storage,
   id: GoalId
 ): Storage => {
   const sender = Tezos.get_sender();
@@ -126,15 +129,15 @@ const activateGoal = (
     None: () => failwith("NOT_FOUND"),
   });
   if (goalObj.active) {
-    return { admin, token_count, tickets, goals };
+    return { token_count, tickets, goals, admin, goal_chars, note_chars };
   };
   const updatedGoalMap = Map.update(id, Some({ ...goalObj, active: true }), goalMap);
   const updatedGoals = Big_map.update(sender, Some(updatedGoalMap), goals);
-  return { admin, token_count, tickets, goals: updatedGoals };
+  return { token_count, tickets, goals: updatedGoals, admin, goal_chars, note_chars };
 };
 
 const deactivateGoal = (
-  { admin, token_count, tickets, goals }: Storage,
+  { token_count, tickets, goals, admin, goal_chars, note_chars }: Storage,
   id: GoalId
 ): Storage => {
   const sender = Tezos.get_sender();
@@ -147,11 +150,33 @@ const deactivateGoal = (
     None: () => failwith("NOT_FOUND"),
   });
   if (!goalObj.active) {
-    return { admin, token_count, tickets, goals };
+    return { token_count, tickets, goals, admin, goal_chars, note_chars };
   };
   const updatedGoalMap = Map.update(id, Some({ ...goalObj, active: false }), goalMap);
   const updatedGoals = Big_map.update(sender, Some(updatedGoalMap), goals);
-  return { admin, token_count, tickets, goals: updatedGoals };
+  return { token_count, tickets, goals: updatedGoals, admin, goal_chars, note_chars };
+};
+
+const updateGoalChars = (
+  { token_count, tickets, goals, admin, goal_chars, note_chars }: Storage,
+  chars: nat
+): Storage => {
+  const sender = Tezos.get_sender();
+  if (sender != admin) {
+    failwith("INSUFFICIENT_PERMISSION");
+  }
+  return { token_count, tickets, goals, admin, goal_chars: chars, note_chars };
+};
+
+const updateNoteChars = (
+  { token_count, tickets, goals, admin, goal_chars, note_chars }: Storage,
+  chars: nat
+): Storage => {
+  const sender = Tezos.get_sender();
+  if (sender != admin) {
+    failwith("INSUFFICIENT_PERMISSION");
+  }
+  return { token_count, tickets, goals, admin, goal_chars, note_chars: chars };
 };
 
 const main = (parameter: Parameter, store: Storage): Return => {
@@ -163,6 +188,8 @@ const main = (parameter: Parameter, store: Storage): Return => {
       Punch: (params) => punch(store, params),
       Activate_Goal: (goal_id: GoalId) => activateGoal(store, goal_id),
       Deactivate_Goal: (goal_id: GoalId) => deactivateGoal(store, goal_id),
+      Update_Goal_Chars: (chars: nat) => updateGoalChars(store, chars),
+      Update_Note_Chars: (chars: nat) => updateNoteChars(store, chars),
     }))
   ];
 };
