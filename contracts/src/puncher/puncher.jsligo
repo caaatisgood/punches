@@ -17,8 +17,8 @@ type Storage = {
   token_count: nat,
   tickets: big_map<nat, ticket<nat>>,
   goals: big_map<address, map<GoalId, Goal>>,
-  goal_chars: nat,
-  note_chars: nat,
+  goal_chars: nat, // prob ~100
+  note_chars: nat, // prob ~50
   admin: address,
 };
 
@@ -44,7 +44,9 @@ const setGoal = (
     Some: (goalMap: map<GoalId, Goal>) => goalMap,
     None: () => (Map.empty as map<GoalId, Goal>),
   });
-  // TODO: check goal length
+  if (String.length(goal) > goal_chars) {
+    failwith("GOAL_EXCEEDS_MAX_LEN");
+  }
   const id: nat = Map.size(goalMap);
   const newGoal: Goal = {
     id,
@@ -74,7 +76,9 @@ const updateGoal = (
     Some: (goalObj: Goal) => goalObj,
     None: () => failwith("NOT_FOUND"),
   });
-  // TODO: check goal length
+  if (String.length(goal) > goal_chars) {
+    failwith("GOAL_EXCEEDS_MAX_LEN");
+  }
   const updatedGoalMap = Map.update(id, Some({ ...goalObj, goal }), goalMap);
   const updatedGoals = Big_map.update(sender, Some(updatedGoalMap), goals);
   return { token_count, tickets, goals: updatedGoals, admin, goal_chars, note_chars };
@@ -93,7 +97,9 @@ const punch = (
     Some: (goalObj: Goal) => goalObj,
     None: () => failwith("NOT_FOUND"),
   });
-  // TODO: check note length
+  if (String.length(note) > note_chars) {
+    failwith("NOTE_EXCEEDS_MAX_LEN");
+  }
   const ticketId: nat = token_count + (1 as nat);
   const ticket_: ticket<nat> = Option.unopt(Tezos.create_ticket(ticketId, 1 as nat));
   const [_, updatedTickets] = Big_map.get_and_update(ticketId, Some(ticket_), tickets);
