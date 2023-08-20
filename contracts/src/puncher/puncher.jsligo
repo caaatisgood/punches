@@ -15,25 +15,30 @@ type TokenData = big_map<nat, {
 
 type Storage = {
   admin: address,
-  tickets: big_map<nat, ticket<string>>,
+  token_count: nat,
+  tickets: big_map<nat, ticket<nat>>,
   goals: big_map<address, map<GoalId, Goal>>,
 };
 
 type Parameter =
   | ["Set_Goal", string]
-  | ["Update_Goal", { goal: string, id: nat }]
-  | ["Punch", string]
+  | ["Update_Goal", { goal: string, id: GoalId }]
+  | ["Punch", { note: string, id: GoalId }]
   | ["Activate_Goal", GoalId]
   | ["Deactivate_Goal", GoalId];
 
 type Return = [list<operation>, Storage];
 
-const setGoal = ({ admin, tickets, goals }: Storage, goal: string): Storage => {
+const setGoal = (
+  { admin, token_count, tickets, goals }: Storage,
+  goal: string
+): Storage => {
   const sender = Tezos.get_sender();
   const goalMap: map<GoalId, Goal> = match((Big_map.find_opt(sender, goals)), {
     Some: (goalMap: map<GoalId, Goal>) => goalMap,
     None: () => (Map.empty as map<GoalId, Goal>),
   });
+  // TODO: check goal length
   const id: nat = Map.size(goalMap);
   const newGoal: Goal = {
     id,
@@ -49,12 +54,16 @@ const setGoal = ({ admin, tickets, goals }: Storage, goal: string): Storage => {
   );
   return {
     admin,
+    token_count,
     tickets,
     goals: updatedGoals,
   };
 };
 
-const updateGoal = ({ admin, tickets, goals }: Storage, { goal, id }: { goal: string, id: nat }): Storage => {
+const updateGoal = (
+  { admin, token_count, tickets, goals }: Storage,
+  { goal, id }: { goal: string, id: nat }
+): Storage => {
   const sender = Tezos.get_sender();
   const goalMap: map<GoalId, Goal> = match((Big_map.find_opt(sender, goals)), {
     Some: (goalMap: map<GoalId, Goal>) => goalMap,
@@ -64,24 +73,49 @@ const updateGoal = ({ admin, tickets, goals }: Storage, { goal, id }: { goal: st
     Some: (goalObj: Goal) => goalObj,
     None: () => failwith("NOT_FOUND"),
   });
+  // TODO: check goal length
   const updatedGoalMap = Map.update(id, Some({ ...goalObj, goal }), goalMap);
-  const updatedGoals = Big_map.update(
-    sender,
-    Some(updatedGoalMap),
-    goals
+  const updatedGoals = Big_map.update(sender, Some(updatedGoalMap), goals);
+  return { admin, token_count, tickets, goals: updatedGoals };
+};
+
+const punch = (
+  { admin, token_count, tickets, goals }: Storage,
+  { note, id }: { note: string, id: GoalId }
+): Storage => {
+  const sender = Tezos.get_sender();
+  const goalMap: map<GoalId, Goal> = match((Big_map.find_opt(sender, goals)), {
+    Some: (goalMap: map<GoalId, Goal>) => goalMap,
+    None: () => failwith("NOT_FOUND"),
+  });
+  const goalObj: Goal = match((Map.find_opt(id, goalMap)), {
+    Some: (goalObj: Goal) => goalObj,
+    None: () => failwith("NOT_FOUND"),
+  });
+  // TODO: check note length
+  const ticketId: nat = token_count + (1 as nat);
+  const ticket_: ticket<nat> = Option.unopt(Tezos.create_ticket(ticketId, 1 as nat));
+  const [_, updatedTickets] = Big_map.get_and_update(ticketId, Some(ticket_), tickets);
+  const updatedGoalMap = Map.update( id,
+    Some({
+      ...goalObj,
+      tokens: list([ticketId, ...goalObj.tokens]),
+    }),
+    goalMap
   );
+  const updatedGoals = Big_map.update(sender, Some(updatedGoalMap), goals);
   return {
     admin,
-    tickets,
+    token_count: ticketId,
+    tickets: updatedTickets,
     goals: updatedGoals,
   };
 };
 
-const punch = ({ admin, tickets, goals }: Storage, note: string): Storage => {
-  return { admin, tickets, goals };
-};
-
-const activateGoal = ({ admin, tickets, goals }: Storage, id: GoalId): Storage => {
+const activateGoal = (
+  { admin, token_count, tickets, goals }: Storage,
+  id: GoalId
+): Storage => {
   const sender = Tezos.get_sender();
   const goalMap: map<GoalId, Goal> = match((Big_map.find_opt(sender, goals)), {
     Some: (goalMap: map<GoalId, Goal>) => goalMap,
@@ -92,18 +126,17 @@ const activateGoal = ({ admin, tickets, goals }: Storage, id: GoalId): Storage =
     None: () => failwith("NOT_FOUND"),
   });
   if (goalObj.active) {
-    return { admin, tickets, goals };
+    return { admin, token_count, tickets, goals };
   };
   const updatedGoalMap = Map.update(id, Some({ ...goalObj, active: true }), goalMap);
-  const updatedGoals = Big_map.update(
-    sender,
-    Some(updatedGoalMap),
-    goals
-  );
-  return { admin, tickets, goals: updatedGoals };
+  const updatedGoals = Big_map.update(sender, Some(updatedGoalMap), goals);
+  return { admin, token_count, tickets, goals: updatedGoals };
 };
 
-const deactivateGoal = ({ admin, tickets, goals }: Storage, id: GoalId): Storage => {
+const deactivateGoal = (
+  { admin, token_count, tickets, goals }: Storage,
+  id: GoalId
+): Storage => {
   const sender = Tezos.get_sender();
   const goalMap: map<GoalId, Goal> = match((Big_map.find_opt(sender, goals)), {
     Some: (goalMap: map<GoalId, Goal>) => goalMap,
@@ -114,15 +147,11 @@ const deactivateGoal = ({ admin, tickets, goals }: Storage, id: GoalId): Storage
     None: () => failwith("NOT_FOUND"),
   });
   if (!goalObj.active) {
-    return { admin, tickets, goals };
+    return { admin, token_count, tickets, goals };
   };
   const updatedGoalMap = Map.update(id, Some({ ...goalObj, active: false }), goalMap);
-  const updatedGoals = Big_map.update(
-    sender,
-    Some(updatedGoalMap),
-    goals
-  );
-  return { admin, tickets, goals: updatedGoals };
+  const updatedGoals = Big_map.update(sender, Some(updatedGoalMap), goals);
+  return { admin, token_count, tickets, goals: updatedGoals };
 };
 
 const main = (parameter: Parameter, store: Storage): Return => {
@@ -131,7 +160,7 @@ const main = (parameter: Parameter, store: Storage): Return => {
     (match (parameter, {
       Set_Goal: (goal: string) => setGoal(store, goal),
       Update_Goal: (params) => updateGoal(store, params),
-      Punch: (note: string) => punch(store, note),
+      Punch: (params) => punch(store, params),
       Activate_Goal: (goal_id: GoalId) => activateGoal(store, goal_id),
       Deactivate_Goal: (goal_id: GoalId) => deactivateGoal(store, goal_id),
     }))
