@@ -23,8 +23,8 @@ type Parameter =
   | ["Set_Goal", string]
   | ["Update_Goal", { goal: string, id: nat }]
   | ["Punch", string]
-  | ["Activate_Goal", int]
-  | ["Deactivate_goal", int];
+  | ["Activate_Goal", GoalId]
+  | ["Deactivate_Goal", GoalId];
 
 type Return = [list<operation>, Storage];
 
@@ -77,8 +77,52 @@ const updateGoal = ({ admin, tickets, goals }: Storage, { goal, id }: { goal: st
   };
 };
 
-const punch = ({ admin, tickets, goals }: Storage): Storage => {
+const punch = ({ admin, tickets, goals }: Storage, note: string): Storage => {
   return { admin, tickets, goals };
+};
+
+const activateGoal = ({ admin, tickets, goals }: Storage, id: GoalId): Storage => {
+  const sender = Tezos.get_sender();
+  const goalMap: map<GoalId, Goal> = match((Big_map.find_opt(sender, goals)), {
+    Some: (goalMap: map<GoalId, Goal>) => goalMap,
+    None: () => failwith("NOT_FOUND"),
+  });
+  const goalObj: Goal = match((Map.find_opt(id, goalMap)), {
+    Some: (goalObj: Goal) => goalObj,
+    None: () => failwith("NOT_FOUND"),
+  });
+  if (goalObj.active) {
+    return { admin, tickets, goals };
+  };
+  const updatedGoalMap = Map.update(id, Some({ ...goalObj, active: true }), goalMap);
+  const updatedGoals = Big_map.update(
+    sender,
+    Some(updatedGoalMap),
+    goals
+  );
+  return { admin, tickets, goals: updatedGoals };
+};
+
+const deactivateGoal = ({ admin, tickets, goals }: Storage, id: GoalId): Storage => {
+  const sender = Tezos.get_sender();
+  const goalMap: map<GoalId, Goal> = match((Big_map.find_opt(sender, goals)), {
+    Some: (goalMap: map<GoalId, Goal>) => goalMap,
+    None: () => failwith("NOT_FOUND"),
+  });
+  const goalObj: Goal = match((Map.find_opt(id, goalMap)), {
+    Some: (goalObj: Goal) => goalObj,
+    None: () => failwith("NOT_FOUND"),
+  });
+  if (!goalObj.active) {
+    return { admin, tickets, goals };
+  };
+  const updatedGoalMap = Map.update(id, Some({ ...goalObj, active: false }), goalMap);
+  const updatedGoals = Big_map.update(
+    sender,
+    Some(updatedGoalMap),
+    goals
+  );
+  return { admin, tickets, goals: updatedGoals };
 };
 
 const main = (parameter: Parameter, store: Storage): Return => {
@@ -87,9 +131,9 @@ const main = (parameter: Parameter, store: Storage): Return => {
     (match (parameter, {
       Set_Goal: (goal: string) => setGoal(store, goal),
       Update_Goal: (params) => updateGoal(store, params),
-      Punch: (note: string) => store,
-      Activate_Goal: (goal_id: int) => store,
-      Deactivate_goal: (goal_id: int) => store,
+      Punch: (note: string) => punch(store, note),
+      Activate_Goal: (goal_id: GoalId) => activateGoal(store, goal_id),
+      Deactivate_Goal: (goal_id: GoalId) => deactivateGoal(store, goal_id),
     }))
   ];
 };
