@@ -1,0 +1,18 @@
+# import "./puncher/types.jsligo" "Types"
+
+type Storage = {
+  puncher_addr: address,
+};
+type Action = Types.action;
+type Return = [list<operation>, Storage];
+
+const main = (action: Action, storage: Storage): Return => {
+  const counter =
+    match (Tezos.get_contract_opt(storage.puncher_addr), {
+      Some: contract => contract,
+      None: () => failwith("Contract not found.")
+    });
+
+  const op = Tezos.transaction(action, 0 as tez, counter);
+  return [list([op]), storage];
+};

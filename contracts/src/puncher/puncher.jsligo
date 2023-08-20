@@ -1,0 +1,89 @@
+type GoalId = nat;
+
+type Goal = {
+  id: GoalId,
+  goal: string,
+  tokens: list<nat>,
+  active: bool,
+};
+
+type TokenData = big_map<nat, {
+  goal_id: nat,
+  note: string,
+  mood: int, // default: -1, 1 ~ 10
+}>;
+
+type Storage = {
+  admin: address,
+  tickets: big_map<nat, ticket<string>>,
+  goals: big_map<address, map<GoalId, Goal>>,
+};
+
+type Parameter =
+  | ["Set_Goal", string]
+  | ["Update_Goal", { goal: string, id: nat }]
+  | ["Punch", string]
+  | ["Activate_Goal", int]
+  | ["Deactivate_goal", int];
+
+type Return = [list<operation>, Storage];
+
+const setGoal = ({ admin, tickets, goals }: Storage, goal: string): Storage => {
+  const sender = Tezos.get_sender();
+  const goalMap: map<GoalId, Goal> = match((Big_map.find_opt(sender, goals)), {
+    Some: (goalsMap: map<GoalId, Goal>) => goalsMap,
+    None: () => (Map.empty as map<GoalId, Goal>),
+  });
+  const id: nat = Map.size(goalMap);
+  const newGoal: Goal = {
+    id,
+    goal,
+    tokens: (list([]) as list<nat>),
+    active: true,
+  };
+  const updatedGoalMap = Map.add(id, newGoal, goalMap);
+  const updatedGoals = Big_map.update(
+    sender,
+    Some(updatedGoalMap),
+    goals
+  );
+  return {
+    admin,
+    tickets,
+    goals: updatedGoals,
+  };
+};
+
+const updateGoal = ({ admin, tickets, goals }: Storage, { goal, id }: { goal: string, id: nat }): Storage => {
+  // const sender = Tezos.get_sender();
+  // const currentGoals: list<Goal> = match((Big_map.find_opt(sender, goals)), {
+  //   Some: (goals: list<Goal>) => goals,
+  //   None: () => failwith("NOT_FOUND"),
+  // });
+  // if (id >= List.length(currentGoals)) {
+  //   failwith("NOT_FOUND");
+  // }
+
+  return {
+    admin,
+    tickets,
+    goals,
+  };
+};
+
+const punch = ({ admin, tickets, goals }: Storage): Storage => {
+  return { admin, tickets, goals };
+};
+
+const main = (parameter: Parameter, store: Storage): Return => {
+  return [
+    list([]),
+    (match (parameter, {
+      Set_Goal: (goal: string) => setGoal(store, goal),
+      Update_Goal: (params) => updateGoal(store, params),
+      Punch: (note: string) => store,
+      Activate_Goal: (goal_id: int) => store,
+      Deactivate_goal: (goal_id: int) => store,
+    }))
+  ];
+};
