@@ -199,3 +199,55 @@ const main = (parameter: Parameter, store: Storage): Return => {
     }))
   ];
 };
+
+// @view
+const token_exist = (id: nat, store: Storage): bool => {
+  const { token_count, tickets, goals, admin, goal_chars, note_chars } = store;
+  return id < token_count;
+};
+
+// @view
+const user_goals = (addr: address, store: Storage): map<GoalId, Goal> => {
+  const { token_count, tickets, goals, admin, goal_chars, note_chars } = store;
+  return match((Big_map.find_opt(addr, goals)), {
+    Some: (goalMap: map<GoalId, Goal>) => goalMap,
+    None: () => failwith("NOT_FOUND"),
+  });
+};
+
+// @view
+const user_goal = (
+  { addr, id }: { addr: address, id: GoalId },
+  store: Storage
+): Goal => {
+  const { token_count, tickets, goals, admin, goal_chars, note_chars } = store;
+  const goalMap: map<GoalId, Goal> = match((Big_map.find_opt(addr, goals)), {
+    Some: (goalMap: map<GoalId, Goal>) => goalMap,
+    None: () => failwith("NOT_FOUND"),
+  });
+  return match((Map.find_opt(id, goalMap)), {
+    Some: (goalObj: Goal) => goalObj,
+    None: () => failwith("NOT_FOUND"),
+  });
+};
+
+// @view
+const is_goal_active = (
+  { addr, id }: { addr: address, id: GoalId },
+  store: Storage
+): bool => {
+  const { token_count, tickets, goals, admin, goal_chars, note_chars } = store;
+  const goalMap: map<GoalId, Goal> = match((Big_map.find_opt(addr, goals)), {
+    Some: (goalMap: map<GoalId, Goal>) => goalMap,
+    None: () => failwith("NOT_FOUND"),
+  });
+  const goalObj: Goal = match((Map.find_opt(id, goalMap)), {
+    Some: (goalObj: Goal) => goalObj,
+    None: () => failwith("NOT_FOUND"),
+  });
+  return goalObj.active;
+};
+
+// kinda complex, not sure if it's needed
+// const user_goal_of_token = (id: GoalId, store: Storage) => {
+// };
