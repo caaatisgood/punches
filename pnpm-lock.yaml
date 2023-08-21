@@ -38,6 +38,9 @@ importers:
 
   frontend:
     dependencies:
+      '@airgap/beacon-types':
+        specifier: ^4.0.6
+        version: 4.0.6
       '@taquito/beacon-wallet':
         specifier: ^17.1.1
         version: 17.1.1
@@ -156,6 +159,12 @@ packages:
 
   /@airgap/beacon-types@4.0.2:
     resolution: {integrity: sha512-MWbE+350Yd7aICBEwTVIkty/YmKO5eTDsMbReUCNH8qf64gGhj/ZXEN6FPwMab+qKdmACgCkmbbtAXGGtmjwrA==}
+    dependencies:
+      '@types/chrome': 0.0.163
+    dev: false
+
+  /@airgap/beacon-types@4.0.6:
+    resolution: {integrity: sha512-9hBUts03MdYAp0IdNnXbLO1JDZd3jNXyez4ahht0jv396aPc27ZKAcWKBjkZCMbxQwpw9/pZVAmkLCErYNMSww==}
     dependencies:
       '@types/chrome': 0.0.163
     dev: false

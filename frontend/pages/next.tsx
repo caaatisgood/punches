@@ -1,6 +1,6 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 
-import { getWallet } from '@/utils/wallet'
+import { getWallet, callSetWip } from '@/utils/wallet'
 
 const WIP_MAX_CHARS = 100
 
@@ -18,7 +18,12 @@ const local = {
 const randPlaceholder = PLACEHOLDERS[Math.floor((Math.random() * PLACEHOLDERS.length))]
 
 const Page = () => {
+  const [isCsrReady, setIsCsrReady] = useState(false)
   const [wip, setWip] = useState(local.getWip() || "")
+
+  useEffect(() => {
+    setIsCsrReady(true)
+  }, [])
   // const divRef = useRef<HTMLDivElement>(null)
 
   // useEffect(() => {
@@ -44,19 +49,34 @@ const Page = () => {
     local.setWip(wip)
   }
 
-  const onSubmit = (evt: React.FormEvent<HTMLFormElement>) => {
+  const onSubmit = async (evt: React.FormEvent<HTMLFormElement>) => {
     evt.preventDefault()
     const wallet = getWallet()
-    wallet
-      .requestPermissions({
-        network: {
-          // @ts-ignore
-          type: 'ghostnet',
-        },
-      })
-      .then((_) => wallet.getPKH())
-      .then((address) => console.log(`Your address: ${address}`));
+    let pkh = await wallet.getPKH()
+    if (!pkh) {
+      // connect wallet
+      pkh = await wallet
+        .requestPermissions({
+          network: {
+            // @ts-ignore
+            type: 'ghostnet',
+          },
+        })
+        .then((_) => wallet.getPKH())
+        .catch(error => {
+          alert(error)
+          return ""
+        })
+    }
+    // call contract
+    await callSetWip(wip);
   }
+
+  if (!isCsrReady) {
+    return null
+  }
+
+  // check if wallet already set goal
 
   return (
     <main
