@@ -1,14 +1,14 @@
-type GoalId = nat;
+type WipId = nat;
 
-type Goal = {
-  id: GoalId,
-  goal: string,
+type Wip = {
+  id: WipId,
+  wip: string,
   tokens: list<nat>,
   active: bool,
 };
 
 type TokenData = big_map<nat, {
-  goal_id: nat,
+  wip_id: nat,
   note: string,
   mood: int, // default: -1, 1 ~ 10
 }>;
@@ -16,8 +16,8 @@ type TokenData = big_map<nat, {
 type Storage = {
   token_count: nat,
   tickets: big_map<nat, ticket<nat>>,
-  goals: big_map<address, map<GoalId, Goal>>,
-  goal_chars: nat, // prob ~100
+  wips: big_map<address, map<WipId, Wip>>,
+  wip_chars: nat, // prob ~100
   note_chars: nat, // prob ~50
   admin: address,
   paused: bool,
@@ -25,87 +25,87 @@ type Storage = {
 
 type Parameter =
   // permissionless
-  | ["Set_goal", string]
-  | ["Update_goal", { goal: string, id: GoalId }]
-  | ["Punch", { note: string, id: GoalId }]
-  | ["Activate_goal", GoalId]
-  | ["Deactivate_goal", GoalId]
+  | ["Set_wip", string]
+  | ["Update_wip", { wip: string, id: WipId }]
+  | ["Punch", { note: string, id: WipId }]
+  | ["Activate_wip", WipId]
+  | ["Deactivate_wip", WipId]
   // admin
-  | ["Set_goal_chars", nat]
+  | ["Set_wip_chars", nat]
   | ["Set_note_chars", nat]
   | ["Set_pause", bool];
 
 type Return = [list<operation>, Storage];
 
-const setGoal = (
-  { token_count, tickets, goals, admin, goal_chars, note_chars, paused }: Storage,
-  goal: string
+const setWip = (
+  { token_count, tickets, wips, admin, wip_chars, note_chars, paused }: Storage,
+  wip: string
 ): Storage => {
   if (paused) {
     failwith("PAUSED");
   }
   const sender = Tezos.get_sender();
-  const goalMap: map<GoalId, Goal> = match((Big_map.find_opt(sender, goals)), {
-    Some: (goalMap: map<GoalId, Goal>) => goalMap,
-    None: () => (Map.empty as map<GoalId, Goal>),
+  const wipMap: map<WipId, Wip> = match((Big_map.find_opt(sender, wips)), {
+    Some: (wipMap: map<WipId, Wip>) => wipMap,
+    None: () => (Map.empty as map<WipId, Wip>),
   });
-  if (String.length(goal) > goal_chars) {
-    failwith("GOAL_EXCEEDS_MAX_LEN");
+  if (String.length(wip) > wip_chars) {
+    failwith("WIP_EXCEEDS_MAX_LEN");
   }
-  const id: nat = Map.size(goalMap);
-  const newGoal: Goal = {
+  const id: nat = Map.size(wipMap);
+  const newWip: Wip = {
     id,
-    goal,
+    wip,
     tokens: (list([]) as list<nat>),
     active: true,
   };
-  const updatedGoalMap = Map.add(id, newGoal, goalMap);
-  const updatedGoals = Big_map.update(
+  const updatedWipMap = Map.add(id, newWip, wipMap);
+  const updatedWips = Big_map.update(
     sender,
-    Some(updatedGoalMap),
-    goals
+    Some(updatedWipMap),
+    wips
   );
-  return { token_count, tickets, goals: updatedGoals, admin, goal_chars, note_chars, paused };
+  return { token_count, tickets, wips: updatedWips, admin, wip_chars, note_chars, paused };
 };
 
-const updateGoal = (
-  { token_count, tickets, goals, admin, goal_chars, note_chars, paused }: Storage,
-  { goal, id }: { goal: string, id: nat }
+const updateWip = (
+  { token_count, tickets, wips, admin, wip_chars, note_chars, paused }: Storage,
+  { wip, id }: { wip: string, id: nat }
 ): Storage => {
   if (paused) {
     failwith("PAUSED");
   }
   const sender = Tezos.get_sender();
-  const goalMap: map<GoalId, Goal> = match((Big_map.find_opt(sender, goals)), {
-    Some: (goalMap: map<GoalId, Goal>) => goalMap,
+  const wipMap: map<WipId, Wip> = match((Big_map.find_opt(sender, wips)), {
+    Some: (wipMap: map<WipId, Wip>) => wipMap,
     None: () => failwith("NOT_FOUND"),
   });
-  const goalObj: Goal = match((Map.find_opt(id, goalMap)), {
-    Some: (goalObj: Goal) => goalObj,
+  const wipObj: Wip = match((Map.find_opt(id, wipMap)), {
+    Some: (wipObj: Wip) => wipObj,
     None: () => failwith("NOT_FOUND"),
   });
-  if (String.length(goal) > goal_chars) {
-    failwith("GOAL_EXCEEDS_MAX_LEN");
+  if (String.length(wip) > wip_chars) {
+    failwith("WIP_EXCEEDS_MAX_LEN");
   }
-  const updatedGoalMap = Map.update(id, Some({ ...goalObj, goal }), goalMap);
-  const updatedGoals = Big_map.update(sender, Some(updatedGoalMap), goals);
-  return { token_count, tickets, goals: updatedGoals, admin, goal_chars, note_chars, paused };
+  const updatedWipMap = Map.update(id, Some({ ...wipObj, wip }), wipMap);
+  const updatedWips = Big_map.update(sender, Some(updatedWipMap), wips);
+  return { token_count, tickets, wips: updatedWips, admin, wip_chars, note_chars, paused };
 };
 
 const punch = (
-  { token_count, tickets, goals, admin, goal_chars, note_chars, paused }: Storage,
-  { note, id }: { note: string, id: GoalId }
+  { token_count, tickets, wips, admin, wip_chars, note_chars, paused }: Storage,
+  { note, id }: { note: string, id: WipId }
 ): Storage => {
   if (paused) {
     failwith("PAUSED");
   }
   const sender = Tezos.get_sender();
-  const goalMap: map<GoalId, Goal> = match((Big_map.find_opt(sender, goals)), {
-    Some: (goalMap: map<GoalId, Goal>) => goalMap,
+  const wipMap: map<WipId, Wip> = match((Big_map.find_opt(sender, wips)), {
+    Some: (wipMap: map<WipId, Wip>) => wipMap,
     None: () => failwith("NOT_FOUND"),
   });
-  const goalObj: Goal = match((Map.find_opt(id, goalMap)), {
-    Some: (goalObj: Goal) => goalObj,
+  const wipObj: Wip = match((Map.find_opt(id, wipMap)), {
+    Some: (wipObj: Wip) => wipObj,
     None: () => failwith("NOT_FOUND"),
   });
   if (String.length(note) > note_chars) {
@@ -114,101 +114,101 @@ const punch = (
   const ticketId: nat = token_count + (1 as nat);
   const ticket_: ticket<nat> = Option.unopt(Tezos.create_ticket(ticketId, 1 as nat));
   const [_, updatedTickets] = Big_map.get_and_update(ticketId, Some(ticket_), tickets);
-  const updatedGoalMap = Map.update( id,
+  const updatedWipMap = Map.update( id,
     Some({
-      ...goalObj,
-      tokens: list([ticketId, ...goalObj.tokens]),
+      ...wipObj,
+      tokens: list([ticketId, ...wipObj.tokens]),
     }),
-    goalMap
+    wipMap
   );
-  const updatedGoals = Big_map.update(sender, Some(updatedGoalMap), goals);
+  const updatedWips = Big_map.update(sender, Some(updatedWipMap), wips);
   return {
     token_count: ticketId,
     tickets: updatedTickets,
-    goals: updatedGoals,
+    wips: updatedWips,
     admin,
-    goal_chars,
+    wip_chars,
     note_chars,
     paused,
   };
 };
 
-const activateGoal = (
-  { token_count, tickets, goals, admin, goal_chars, note_chars, paused }: Storage,
-  id: GoalId
+const activateWip = (
+  { token_count, tickets, wips, admin, wip_chars, note_chars, paused }: Storage,
+  id: WipId
 ): Storage => {
   const sender = Tezos.get_sender();
-  const goalMap: map<GoalId, Goal> = match((Big_map.find_opt(sender, goals)), {
-    Some: (goalMap: map<GoalId, Goal>) => goalMap,
+  const wipMap: map<WipId, Wip> = match((Big_map.find_opt(sender, wips)), {
+    Some: (wipMap: map<WipId, Wip>) => wipMap,
     None: () => failwith("NOT_FOUND"),
   });
-  const goalObj: Goal = match((Map.find_opt(id, goalMap)), {
-    Some: (goalObj: Goal) => goalObj,
+  const wipObj: Wip = match((Map.find_opt(id, wipMap)), {
+    Some: (wipObj: Wip) => wipObj,
     None: () => failwith("NOT_FOUND"),
   });
-  if (goalObj.active) {
-    return { token_count, tickets, goals, admin, goal_chars, note_chars, paused };
+  if (wipObj.active) {
+    return { token_count, tickets, wips, admin, wip_chars, note_chars, paused };
   }
-  const updatedGoalMap = Map.update(id, Some({ ...goalObj, active: true }), goalMap);
-  const updatedGoals = Big_map.update(sender, Some(updatedGoalMap), goals);
-  return { token_count, tickets, goals: updatedGoals, admin, goal_chars, note_chars, paused };
+  const updatedWipMap = Map.update(id, Some({ ...wipObj, active: true }), wipMap);
+  const updatedWips = Big_map.update(sender, Some(updatedWipMap), wips);
+  return { token_count, tickets, wips: updatedWips, admin, wip_chars, note_chars, paused };
 };
 
-const deactivateGoal = (
-  { token_count, tickets, goals, admin, goal_chars, note_chars, paused }: Storage,
-  id: GoalId
+const deactivateWip = (
+  { token_count, tickets, wips, admin, wip_chars, note_chars, paused }: Storage,
+  id: WipId
 ): Storage => {
   const sender = Tezos.get_sender();
-  const goalMap: map<GoalId, Goal> = match((Big_map.find_opt(sender, goals)), {
-    Some: (goalMap: map<GoalId, Goal>) => goalMap,
+  const wipMap: map<WipId, Wip> = match((Big_map.find_opt(sender, wips)), {
+    Some: (wipMap: map<WipId, Wip>) => wipMap,
     None: () => failwith("NOT_FOUND"),
   });
-  const goalObj: Goal = match((Map.find_opt(id, goalMap)), {
-    Some: (goalObj: Goal) => goalObj,
+  const wipObj: Wip = match((Map.find_opt(id, wipMap)), {
+    Some: (wipObj: Wip) => wipObj,
     None: () => failwith("NOT_FOUND"),
   });
-  if (!goalObj.active) {
-    return { token_count, tickets, goals, admin, goal_chars, note_chars, paused };
+  if (!wipObj.active) {
+    return { token_count, tickets, wips, admin, wip_chars, note_chars, paused };
   }
-  const updatedGoalMap = Map.update(id, Some({ ...goalObj, active: false }), goalMap);
-  const updatedGoals = Big_map.update(sender, Some(updatedGoalMap), goals);
-  return { token_count, tickets, goals: updatedGoals, admin, goal_chars, note_chars, paused };
+  const updatedWipMap = Map.update(id, Some({ ...wipObj, active: false }), wipMap);
+  const updatedWips = Big_map.update(sender, Some(updatedWipMap), wips);
+  return { token_count, tickets, wips: updatedWips, admin, wip_chars, note_chars, paused };
 };
 
-const setGoalChars = (
-  { token_count, tickets, goals, admin, goal_chars, note_chars, paused }: Storage,
+const setWipChars = (
+  { token_count, tickets, wips, admin, wip_chars, note_chars, paused }: Storage,
   chars: nat
 ): Storage => {
   assert_with_error((Tezos.get_sender() == admin), "INSUFFICIENT_PERMISSION");
-  return { token_count, tickets, goals, admin, goal_chars: chars, note_chars, paused };
+  return { token_count, tickets, wips, admin, wip_chars: chars, note_chars, paused };
 };
 
 const setNoteChars = (
-  { token_count, tickets, goals, admin, goal_chars, note_chars, paused }: Storage,
+  { token_count, tickets, wips, admin, wip_chars, note_chars, paused }: Storage,
   chars: nat
 ): Storage => {
   assert_with_error((Tezos.get_sender() == admin), "INSUFFICIENT_PERMISSION");
-  return { token_count, tickets, goals, admin, goal_chars, note_chars: chars, paused };
+  return { token_count, tickets, wips, admin, wip_chars, note_chars: chars, paused };
 };
 
 const setPause = (
-  { token_count, tickets, goals, admin, goal_chars, note_chars, paused }: Storage,
+  { token_count, tickets, wips, admin, wip_chars, note_chars, paused }: Storage,
   paused_: bool
 ) => {
   assert_with_error((Tezos.get_sender() == admin), "INSUFFICIENT_PERMISSION");
-  return { token_count, tickets, goals, admin, goal_chars, note_chars, paused: paused_ };
+  return { token_count, tickets, wips, admin, wip_chars, note_chars, paused: paused_ };
 }
 
 const main = (parameter: Parameter, store: Storage): Return => {
   return [
     list([]),
     (match (parameter, {
-      Set_goal: (goal: string) => setGoal(store, goal),
-      Update_goal: (params) => updateGoal(store, params),
+      Set_wip: (wip: string) => setWip(store, wip),
+      Update_wip: (params) => updateWip(store, params),
       Punch: (params) => punch(store, params),
-      Activate_goal: (goal_id: GoalId) => activateGoal(store, goal_id),
-      Deactivate_goal: (goal_id: GoalId) => deactivateGoal(store, goal_id),
-      Set_goal_chars: (chars: nat) => setGoalChars(store, chars),
+      Activate_wip: (wip_id: WipId) => activateWip(store, wip_id),
+      Deactivate_wip: (wip_id: WipId) => deactivateWip(store, wip_id),
+      Set_wip_chars: (chars: nat) => setWipChars(store, chars),
       Set_note_chars: (chars: nat) => setNoteChars(store, chars),
       Set_pause: (paused: bool) => setPause(store, paused),
     }))
@@ -217,52 +217,52 @@ const main = (parameter: Parameter, store: Storage): Return => {
 
 // @view
 const token_exist = (id: nat, store: Storage): bool => {
-  const { token_count, tickets, goals, admin, goal_chars, note_chars, paused } = store;
+  const { token_count, tickets, wips, admin, wip_chars, note_chars, paused } = store;
   return id < token_count;
 };
 
 // @view
-const user_goals = (addr: address, store: Storage): map<GoalId, Goal> => {
-  const { token_count, tickets, goals, admin, goal_chars, note_chars, paused } = store;
-  return match((Big_map.find_opt(addr, goals)), {
-    Some: (goalMap: map<GoalId, Goal>) => goalMap,
+const user_wips = (addr: address, store: Storage): map<WipId, Wip> => {
+  const { token_count, tickets, wips, admin, wip_chars, note_chars, paused } = store;
+  return match((Big_map.find_opt(addr, wips)), {
+    Some: (wipMap: map<WipId, Wip>) => wipMap,
     None: () => failwith("NOT_FOUND"),
   });
 };
 
 // @view
-const user_goal = (
-  { addr, id }: { addr: address, id: GoalId },
+const user_wip = (
+  { addr, id }: { addr: address, id: WipId },
   store: Storage
-): Goal => {
-  const { token_count, tickets, goals, admin, goal_chars, note_chars, paused } = store;
-  const goalMap: map<GoalId, Goal> = match((Big_map.find_opt(addr, goals)), {
-    Some: (goalMap: map<GoalId, Goal>) => goalMap,
+): Wip => {
+  const { token_count, tickets, wips, admin, wip_chars, note_chars, paused } = store;
+  const wipMap: map<WipId, Wip> = match((Big_map.find_opt(addr, wips)), {
+    Some: (wipMap: map<WipId, Wip>) => wipMap,
     None: () => failwith("NOT_FOUND"),
   });
-  return match((Map.find_opt(id, goalMap)), {
-    Some: (goalObj: Goal) => goalObj,
+  return match((Map.find_opt(id, wipMap)), {
+    Some: (wipObj: Wip) => wipObj,
     None: () => failwith("NOT_FOUND"),
   });
 };
 
 // @view
-const is_goal_active = (
-  { addr, id }: { addr: address, id: GoalId },
+const is_wip_active = (
+  { addr, id }: { addr: address, id: WipId },
   store: Storage
 ): bool => {
-  const { token_count, tickets, goals, admin, goal_chars, note_chars, paused } = store;
-  const goalMap: map<GoalId, Goal> = match((Big_map.find_opt(addr, goals)), {
-    Some: (goalMap: map<GoalId, Goal>) => goalMap,
+  const { token_count, tickets, wips, admin, wip_chars, note_chars, paused } = store;
+  const wipMap: map<WipId, Wip> = match((Big_map.find_opt(addr, wips)), {
+    Some: (wipMap: map<WipId, Wip>) => wipMap,
     None: () => failwith("NOT_FOUND"),
   });
-  const goalObj: Goal = match((Map.find_opt(id, goalMap)), {
-    Some: (goalObj: Goal) => goalObj,
+  const wipObj: Wip = match((Map.find_opt(id, wipMap)), {
+    Some: (wipObj: Wip) => wipObj,
     None: () => failwith("NOT_FOUND"),
   });
-  return goalObj.active;
+  return wipObj.active;
 };
 
 // kinda complex, not sure if it's needed
-// const user_goal_of_token = (id: GoalId, store: Storage) => {
+// const user_wip_of_token = (id: WipId, store: Storage) => {
 // };

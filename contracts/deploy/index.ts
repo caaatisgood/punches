@@ -46,8 +46,8 @@ async function deployPuncher() {
   let factory_store = {
     token_count: 0,
     tickets: new MichelsonMap(),
-    goals: new MichelsonMap(),
-    goal_chars: 100,
+    wips: new MichelsonMap(),
+    wip_chars: 100,
     note_chars: 50,
     admin: adminAddr,
     paused: false,
