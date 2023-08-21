@@ -1,0 +1,268 @@
+type GoalId = nat;
+
+type Goal = {
+  id: GoalId,
+  goal: string,
+  tokens: list<nat>,
+  active: bool,
+};
+
+type TokenData = big_map<nat, {
+  goal_id: nat,
+  note: string,
+  mood: int, // default: -1, 1 ~ 10
+}>;
+
+type Storage = {
+  token_count: nat,
+  tickets: big_map<nat, ticket<nat>>,
+  goals: big_map<address, map<GoalId, Goal>>,
+  goal_chars: nat, // prob ~100
+  note_chars: nat, // prob ~50
+  admin: address,
+  paused: bool,
+};
+
+type Parameter =
+  // permissionless
+  | ["Set_goal", string]
+  | ["Update_goal", { goal: string, id: GoalId }]
+  | ["Punch", { note: string, id: GoalId }]
+  | ["Activate_goal", GoalId]
+  | ["Deactivate_goal", GoalId]
+  // admin
+  | ["Set_goal_chars", nat]
+  | ["Set_note_chars", nat]
+  | ["Set_pause", bool];
+
+type Return = [list<operation>, Storage];
+
+const setGoal = (
+  { token_count, tickets, goals, admin, goal_chars, note_chars, paused }: Storage,
+  goal: string
+): Storage => {
+  if (paused) {
+    failwith("PAUSED");
+  }
+  const sender = Tezos.get_sender();
+  const goalMap: map<GoalId, Goal> = match((Big_map.find_opt(sender, goals)), {
+    Some: (goalMap: map<GoalId, Goal>) => goalMap,
+    None: () => (Map.empty as map<GoalId, Goal>),
+  });
+  if (String.length(goal) > goal_chars) {
+    failwith("GOAL_EXCEEDS_MAX_LEN");
+  }
+  const id: nat = Map.size(goalMap);
+  const newGoal: Goal = {
+    id,
+    goal,
+    tokens: (list([]) as list<nat>),
+    active: true,
+  };
+  const updatedGoalMap = Map.add(id, newGoal, goalMap);
+  const updatedGoals = Big_map.update(
+    sender,
+    Some(updatedGoalMap),
+    goals
+  );
+  return { token_count, tickets, goals: updatedGoals, admin, goal_chars, note_chars, paused };
+};
+
+const updateGoal = (
+  { token_count, tickets, goals, admin, goal_chars, note_chars, paused }: Storage,
+  { goal, id }: { goal: string, id: nat }
+): Storage => {
+  if (paused) {
+    failwith("PAUSED");
+  }
+  const sender = Tezos.get_sender();
+  const goalMap: map<GoalId, Goal> = match((Big_map.find_opt(sender, goals)), {
+    Some: (goalMap: map<GoalId, Goal>) => goalMap,
+    None: () => failwith("NOT_FOUND"),
+  });
+  const goalObj: Goal = match((Map.find_opt(id, goalMap)), {
+    Some: (goalObj: Goal) => goalObj,
+    None: () => failwith("NOT_FOUND"),
+  });
+  if (String.length(goal) > goal_chars) {
+    failwith("GOAL_EXCEEDS_MAX_LEN");
+  }
+  const updatedGoalMap = Map.update(id, Some({ ...goalObj, goal }), goalMap);
+  const updatedGoals = Big_map.update(sender, Some(updatedGoalMap), goals);
+  return { token_count, tickets, goals: updatedGoals, admin, goal_chars, note_chars, paused };
+};
+
+const punch = (
+  { token_count, tickets, goals, admin, goal_chars, note_chars, paused }: Storage,
+  { note, id }: { note: string, id: GoalId }
+): Storage => {
+  if (paused) {
+    failwith("PAUSED");
+  }
+  const sender = Tezos.get_sender();
+  const goalMap: map<GoalId, Goal> = match((Big_map.find_opt(sender, goals)), {
+    Some: (goalMap: map<GoalId, Goal>) => goalMap,
+    None: () => failwith("NOT_FOUND"),
+  });
+  const goalObj: Goal = match((Map.find_opt(id, goalMap)), {
+    Some: (goalObj: Goal) => goalObj,
+    None: () => failwith("NOT_FOUND"),
+  });
+  if (String.length(note) > note_chars) {
+    failwith("NOTE_EXCEEDS_MAX_LEN");
+  }
+  const ticketId: nat = token_count + (1 as nat);
+  const ticket_: ticket<nat> = Option.unopt(Tezos.create_ticket(ticketId, 1 as nat));
+  const [_, updatedTickets] = Big_map.get_and_update(ticketId, Some(ticket_), tickets);
+  const updatedGoalMap = Map.update( id,
+    Some({
+      ...goalObj,
+      tokens: list([ticketId, ...goalObj.tokens]),
+    }),
+    goalMap
+  );
+  const updatedGoals = Big_map.update(sender, Some(updatedGoalMap), goals);
+  return {
+    token_count: ticketId,
+    tickets: updatedTickets,
+    goals: updatedGoals,
+    admin,
+    goal_chars,
+    note_chars,
+    paused,
+  };
+};
+
+const activateGoal = (
+  { token_count, tickets, goals, admin, goal_chars, note_chars, paused }: Storage,
+  id: GoalId
+): Storage => {
+  const sender = Tezos.get_sender();
+  const goalMap: map<GoalId, Goal> = match((Big_map.find_opt(sender, goals)), {
+    Some: (goalMap: map<GoalId, Goal>) => goalMap,
+    None: () => failwith("NOT_FOUND"),
+  });
+  const goalObj: Goal = match((Map.find_opt(id, goalMap)), {
+    Some: (goalObj: Goal) => goalObj,
+    None: () => failwith("NOT_FOUND"),
+  });
+  if (goalObj.active) {
+    return { token_count, tickets, goals, admin, goal_chars, note_chars, paused };
+  }
+  const updatedGoalMap = Map.update(id, Some({ ...goalObj, active: true }), goalMap);
+  const updatedGoals = Big_map.update(sender, Some(updatedGoalMap), goals);
+  return { token_count, tickets, goals: updatedGoals, admin, goal_chars, note_chars, paused };
+};
+
+const deactivateGoal = (
+  { token_count, tickets, goals, admin, goal_chars, note_chars, paused }: Storage,
+  id: GoalId
+): Storage => {
+  const sender = Tezos.get_sender();
+  const goalMap: map<GoalId, Goal> = match((Big_map.find_opt(sender, goals)), {
+    Some: (goalMap: map<GoalId, Goal>) => goalMap,
+    None: () => failwith("NOT_FOUND"),
+  });
+  const goalObj: Goal = match((Map.find_opt(id, goalMap)), {
+    Some: (goalObj: Goal) => goalObj,
+    None: () => failwith("NOT_FOUND"),
+  });
+  if (!goalObj.active) {
+    return { token_count, tickets, goals, admin, goal_chars, note_chars, paused };
+  }
+  const updatedGoalMap = Map.update(id, Some({ ...goalObj, active: false }), goalMap);
+  const updatedGoals = Big_map.update(sender, Some(updatedGoalMap), goals);
+  return { token_count, tickets, goals: updatedGoals, admin, goal_chars, note_chars, paused };
+};
+
+const setGoalChars = (
+  { token_count, tickets, goals, admin, goal_chars, note_chars, paused }: Storage,
+  chars: nat
+): Storage => {
+  assert_with_error((Tezos.get_sender() == admin), "INSUFFICIENT_PERMISSION");
+  return { token_count, tickets, goals, admin, goal_chars: chars, note_chars, paused };
+};
+
+const setNoteChars = (
+  { token_count, tickets, goals, admin, goal_chars, note_chars, paused }: Storage,
+  chars: nat
+): Storage => {
+  assert_with_error((Tezos.get_sender() == admin), "INSUFFICIENT_PERMISSION");
+  return { token_count, tickets, goals, admin, goal_chars, note_chars: chars, paused };
+};
+
+const setPause = (
+  { token_count, tickets, goals, admin, goal_chars, note_chars, paused }: Storage,
+  paused_: bool
+) => {
+  assert_with_error((Tezos.get_sender() == admin), "INSUFFICIENT_PERMISSION");
+  return { token_count, tickets, goals, admin, goal_chars, note_chars, paused: paused_ };
+}
+
+const main = (parameter: Parameter, store: Storage): Return => {
+  return [
+    list([]),
+    (match (parameter, {
+      Set_goal: (goal: string) => setGoal(store, goal),
+      Update_goal: (params) => updateGoal(store, params),
+      Punch: (params) => punch(store, params),
+      Activate_goal: (goal_id: GoalId) => activateGoal(store, goal_id),
+      Deactivate_goal: (goal_id: GoalId) => deactivateGoal(store, goal_id),
+      Set_goal_chars: (chars: nat) => setGoalChars(store, chars),
+      Set_note_chars: (chars: nat) => setNoteChars(store, chars),
+      Set_pause: (paused: bool) => setPause(store, paused),
+    }))
+  ];
+};
+
+// @view
+const token_exist = (id: nat, store: Storage): bool => {
+  const { token_count, tickets, goals, admin, goal_chars, note_chars, paused } = store;
+  return id < token_count;
+};
+
+// @view
+const user_goals = (addr: address, store: Storage): map<GoalId, Goal> => {
+  const { token_count, tickets, goals, admin, goal_chars, note_chars, paused } = store;
+  return match((Big_map.find_opt(addr, goals)), {
+    Some: (goalMap: map<GoalId, Goal>) => goalMap,
+    None: () => failwith("NOT_FOUND"),
+  });
+};
+
+// @view
+const user_goal = (
+  { addr, id }: { addr: address, id: GoalId },
+  store: Storage
+): Goal => {
+  const { token_count, tickets, goals, admin, goal_chars, note_chars, paused } = store;
+  const goalMap: map<GoalId, Goal> = match((Big_map.find_opt(addr, goals)), {
+    Some: (goalMap: map<GoalId, Goal>) => goalMap,
+    None: () => failwith("NOT_FOUND"),
+  });
+  return match((Map.find_opt(id, goalMap)), {
+    Some: (goalObj: Goal) => goalObj,
+    None: () => failwith("NOT_FOUND"),
+  });
+};
+
+// @view
+const is_goal_active = (
+  { addr, id }: { addr: address, id: GoalId },
+  store: Storage
+): bool => {
+  const { token_count, tickets, goals, admin, goal_chars, note_chars, paused } = store;
+  const goalMap: map<GoalId, Goal> = match((Big_map.find_opt(addr, goals)), {
+    Some: (goalMap: map<GoalId, Goal>) => goalMap,
+    None: () => failwith("NOT_FOUND"),
+  });
+  const goalObj: Goal = match((Map.find_opt(id, goalMap)), {
+    Some: (goalObj: Goal) => goalObj,
+    None: () => failwith("NOT_FOUND"),
+  });
+  return goalObj.active;
+};
+
+// kinda complex, not sure if it's needed
+// const user_goal_of_token = (id: GoalId, store: Storage) => {
+// };
