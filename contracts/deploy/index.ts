@@ -4,7 +4,7 @@ import chalk from "chalk";
 import * as dotenv from "dotenv";
 
 import { missingEnvVarLog, makeSpinnerOperation } from "./utils";
-import PuncherKt from "./compiled/puncher.json";
+import Puncher from "./compiled/puncher.json";
 
 dotenv.config({ path: __dirname + "/.env" });
 
@@ -42,7 +42,7 @@ const Tezos = new TezosToolkit(rpcUrl);
 const signer = new InMemorySigner(pk);
 Tezos.setProvider({ signer: signer });
 
-async function deployPuncherKt() {
+async function deployPuncher() {
   let factory_store = {
     token_count: 0,
     tickets: new MichelsonMap(),
@@ -50,29 +50,30 @@ async function deployPuncherKt() {
     goal_chars: 100,
     note_chars: 50,
     admin: adminAddr,
+    paused: false,
   };
 
   try {
     const origination = await makeSpinnerOperation(
       Tezos.contract.originate({
-        code: PuncherKt,
+        code: Puncher,
         storage: factory_store,
       }),
       {
-        loadingMessage: chalk.yellowBright`Deploying PuncherKt contract`,
-        endMessage: chalk.green`PuncherKt Contract deployed!`,
+        loadingMessage: chalk.yellowBright`Deploying Puncher contract`,
+        endMessage: chalk.green`Puncher Contract deployed!`,
       }
     );
 
     await makeSpinnerOperation(origination.contract(), {
       loadingMessage:
-        chalk.yellowBright`Waiting for PuncherKt contract to be confirmed at: ` +
+        chalk.yellowBright`Waiting for Puncher contract to be confirmed at: ` +
         chalk.yellow.bold(origination.contractAddress),
-      endMessage: chalk.green`PuncherKt Contract confirmed!`,
+      endMessage: chalk.green`Puncher Contract confirmed!`,
     });
 
     console.log(
-      chalk.green`\nPuncherKt Contract address: \n- ` +
+      chalk.green`\nPuncher Contract address: \n- ` +
         chalk.green.underline`${origination.contractAddress}`
     );
   } catch (error: any) {
@@ -84,7 +85,7 @@ async function deployPuncherKt() {
 }
 
 async function deploy() {
-  await deployPuncherKt();
+  await deployPuncher();
 }
 
 deploy();
