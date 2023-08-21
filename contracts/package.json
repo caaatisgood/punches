@@ -5,7 +5,7 @@
   "main": "index.js",
   "scripts": {
     "compile": "ligo compile contract ./src/puncher/puncher.jsligo --michelson-format json > ./deploy/compiled/puncher.json",
-    "deploy": "pnpm exec ts-node deploy/index.ts"
+    "deploy": "pnpm run compile && pnpm exec ts-node deploy/index.ts"
   },
   "keywords": [],
   "author": "",
