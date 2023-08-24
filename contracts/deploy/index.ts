@@ -44,7 +44,8 @@ Tezos.setProvider({ signer: signer });
 
 async function deployPuncher() {
   let factory_store = {
-    token_count: 0,
+    punch_count: 0,
+    punches: new MichelsonMap(),
     tickets: new MichelsonMap(),
     wips: new MichelsonMap(),
     wip_chars: 100,
