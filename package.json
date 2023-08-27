@@ -6,7 +6,7 @@
   "scripts": {
     "fe:dev": "pnpm -F=frontend dev",
     "kt:compile": "pnpm -F=contracts compile",
-    "kt:deploy": "pnpm -F=contracts deploy"
+    "kt:deploy": "pnpm -F=contracts run deploy"
   },
   "keywords": [],
   "author": "",
