@@ -50,6 +50,7 @@ async function deployPuncher() {
     wips: new MichelsonMap(),
     wip_chars: 100,
     note_chars: 50,
+    house_set: new Set(["erevald", "gaudmire", "alterok", "spectreseek"]),
     admin: adminAddr,
     paused: false,
   };
