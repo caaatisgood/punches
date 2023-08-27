@@ -6,6 +6,7 @@ const punch_limit_exceeded = "PUNCH_LIMIT_EXCEEDED";
 const has_genesis_wip_already = "HAS_GENESIS_WIP_ALREADY";
 const has_no_genesis_wip = "HAS_NO_GENESIS_WIP";
 const wip_inactive = "WIP_INACTIVE";
+const wip_cannot_be_empty = "WIP_CANNOT_BE_EMPTY";
 const wip_max_len_exceeded = "WIP_MAX_LEN_EXCEEDED";
 const note_max_len_exceeded = "NOTS_MAX_LEN_EXCEEDED";
 const invalid_house = "INVALID_HOUSE";

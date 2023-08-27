@@ -61,12 +61,18 @@ const _insertWip = (wip: string, wipMap): WipMap => {
   return Map.add(id, newWip, wipMap);
 };
 
+const _assertWipLen = (wip: string, wip_max_chars: nat) => {
+  const wipLen: nat = String.length(wip);
+  assert_with_error(wipLen > (0 as nat), Errors.wip_cannot_be_empty);
+  assert_with_error(wipLen <= wip_max_chars, Errors.wip_max_len_exceeded);
+};
+
 const genesisWip = (
   { punches, tickets, wips, houses, punch_count, punch_cd, wip_chars, note_chars, house_set, admin, paused }: Storage,
   { wip, house }: { wip: string, house: string }
 ) => {
   assert_with_error(!paused, Errors.kt_paused);
-  assert_with_error(String.length(wip) <= wip_chars, Errors.wip_max_len_exceeded);
+  _assertWipLen(wip, wip_chars);
   assert_with_error(Set.mem(house, house_set), Errors.invalid_house);
   const sender = Tezos.get_sender();
   const wipMap: WipMap = match((Big_map.find_opt(sender, wips)), {
@@ -88,7 +94,7 @@ const setWip = (
   wip: string
 ): Storage => {
   assert_with_error(!paused, Errors.kt_paused);
-  assert_with_error(String.length(wip) <= wip_chars, Errors.wip_max_len_exceeded);
+  _assertWipLen(wip, wip_chars);
   const sender = Tezos.get_sender();
   const wipMap: WipMap = match((Big_map.find_opt(sender, wips)), {
     Some: (wipMap: WipMap) => wipMap,
@@ -108,7 +114,7 @@ const updateWip = (
   { wip, id }: { wip: string, id: nat }
 ): Storage => {
   assert_with_error(!paused, Errors.kt_paused);
-  assert_with_error(String.length(wip) <= wip_chars, Errors.wip_max_len_exceeded);
+  _assertWipLen(wip, wip_chars);
   const sender = Tezos.get_sender();
   const wipMap: WipMap = match((Big_map.find_opt(sender, wips)), {
     Some: (wipMap: WipMap) => wipMap,
