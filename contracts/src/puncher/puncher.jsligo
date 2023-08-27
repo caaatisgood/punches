@@ -151,7 +151,11 @@ const punch = (
         Some: (punch) => punch,
         None: () => failwith(Errors.punch_not_found),
       });
-      assert_with_error((punch.punched_at + int(punch_cd)) >= Tezos.get_now(), Errors.punch_limit_exceeded);
+      const nextPunch: timestamp = (punch.punched_at + int(punch_cd)) as timestamp;
+      assert_with_error(
+        Tezos.get_now() >= nextPunch,
+        Errors.punch_limit_exceeded
+      );
     },
     None: () => unit,
   });
@@ -338,5 +342,31 @@ const get_wip = (
   return match((Map.find_opt(id, wipMap)), {
     Some: (wipObj: Wip) => wipObj,
     None: () => failwith(Errors.wip_not_found),
+  });
+};
+
+// @view
+const wen_can_punch = (
+  { addr, id }: { addr: address, id: WipId },
+  store: Storage
+): timestamp => {
+  const { punches, tickets, wips, houses, punch_count, punch_cd, wip_chars, note_chars, house_set, admin, paused } = store;
+  const wipMap: WipMap = match((Big_map.find_opt(addr, wips)), {
+    Some: (wipMap: WipMap) => wipMap,
+    None: () => failwith(Errors.wip_not_found),
+  });
+  const wipObj = match((Map.find_opt(id, wipMap)), {
+    Some: (wipObj: Wip) => wipObj,
+    None: () => failwith(Errors.wip_not_found),
+  });
+  return match((List.head_opt(wipObj.punch_ids)), {
+    Some: (id: nat) => {
+      const punch: Punch = match(Big_map.find_opt(id, punches), {
+        Some: (punch) => punch,
+        None: () => failwith(Errors.punch_not_found),
+      });
+      return (punch.punched_at + int(punch_cd)) as timestamp;
+    },
+    None: () => 0 as timestamp,
   });
 };
