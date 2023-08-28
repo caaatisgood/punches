@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 
-import { getWallet, callSetWip, viewWipGenesis } from '@/utils/wallet'
+import { callGenesisWip } from '@/utils/wallet'
+import { useUserStore } from '@/store/userStore'
 import Header from '@/components/Header'
 
 const WIP_MAX_CHARS = 100
@@ -20,8 +21,10 @@ const randPlaceholder = PLACEHOLDERS[Math.floor((Math.random() * PLACEHOLDERS.le
 
 const Page = () => {
   const [isCsrReady, setIsCsrReady] = useState(false)
-  const [wip, setWip] = useState(local.getWip() || "")
-  // const [hasGenesisWip, setHasGenesisWip] = useState<boolean>(false)
+  const [wipText, setWipText] = useState(local.getWip() || "")
+  const [txStatus, setTxStatus] = useState<string | React.ReactNode>()
+
+  const { address, wip, sync, syncWip } = useUserStore()
 
   useEffect(() => {
     setIsCsrReady(true)
@@ -47,31 +50,35 @@ const Page = () => {
   // }, [divRef])
 
   const updateWip = (wip: string) => {
-    setWip(wip)
+    setWipText(wip)
     local.setWip(wip)
   }
 
   const onSubmit = async (evt: React.FormEvent<HTMLFormElement>) => {
     evt.preventDefault()
-    const wallet = getWallet()
-    let pkh = await wallet.getPKH()
-    if (!pkh) {
-      // connect wallet
-      pkh = await wallet
-        .requestPermissions({
-          network: {
-            // @ts-ignore
-            type: 'ghostnet',
-          },
-        })
-        .then((_) => wallet.getPKH())
-        .catch(error => {
-          alert(error)
-          return ""
-        })
+    let tempAddr: string | undefined
+    if (!address) {
+      tempAddr = await sync()
     }
-    // call contract
-    await callSetWip(wip);
+    if (!tempAddr) {
+      setTxStatus("unable to sync")
+      return
+    }
+    await callGenesisWip(wipText, {
+      onWaitingToBeConfirmed: () => {
+        setTxStatus("your wip is waiting to be confirmed...")
+      },
+      onCompleted: () => {
+        updateWip("")
+        syncWip()
+        setTxStatus(
+          <>
+            you&apos;re all set. and you&apos;re amazing.<br />
+            now get back to biz, work on it, and come back to make your first punch.
+          </>
+        )
+      },
+    })
   }
 
   if (!isCsrReady) {
@@ -110,7 +117,7 @@ const Page = () => {
           <input
             name="wip"
             className="mb-4 bg-neutral-900 text-center text-l w-full sm:w-2/3 lg:w-3/5 xl:w-[50rem] min-h-1 py-3 px-2 outline-none rounded-md"
-            value={wip}
+            value={wipText}
             maxLength={WIP_MAX_CHARS}
             type='text'
             autoFocus
@@ -121,17 +128,20 @@ const Page = () => {
             placeholder={randPlaceholder}
           />
           <p className="text-xs">
-            {wip.length}/{WIP_MAX_CHARS}
+            {wipText.length}/{WIP_MAX_CHARS}
           </p>
           <br />
           <button
             className="shadow-lg shadow-neutral-500/50 px-2 py-1 rounded-md bg-neutral-100 text-neutral-900 disabled:cursor-not-allowed disabled:opacity-80 disabled:shadow-none"
-            disabled={wip.length === 0}
+            disabled={wipText.length === 0}
             type="submit"
           >
             punch
           </button>
         </form>
+        <div className='mt-3 italic text-sm text-center leading-4'>
+          {txStatus}&nbsp;
+        </div>
       </main>
     </>
   )

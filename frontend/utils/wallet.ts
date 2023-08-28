@@ -1,10 +1,9 @@
-import { TezosToolkit } from '@taquito/taquito';
 import { BeaconWallet } from '@taquito/beacon-wallet';
 import { NetworkType } from '@airgap/beacon-types'
 
-import { KT_ADDRESS } from '../config'
+import { Tezos } from '@/store/userStore'
 
-export const Tezos = new TezosToolkit('https://ghostnet.ecadinfra.com');
+import { KT_ADDRESS } from '../config'
 
 let wallet: BeaconWallet
 
@@ -31,34 +30,31 @@ export const getWallet = (): BeaconWallet => {
   return wallet
 }
 
-export const callSetWip = async (wip: string) => {
+export const callGenesisWip = async (
+  wip: string,
+  options?: {
+    onWaitingToBeConfirmed?: (hash: string) => void;
+    onCompleted?: () => void;
+    onFailed?: () => void;
+  }
+) => {
   Tezos.wallet.at(KT_ADDRESS)
-    .then((contract) => {
-      console.log(contract)
-      return contract.methods.set_wip(wip).send()
-    })
+    .then((contract) => contract.methods.genesis_wip(wip).send())
     .then((op) => {
-      console.log(`Hash: ${op.opHash}`);
+      options?.onWaitingToBeConfirmed?.(op.opHash)
       return op.confirmation();
     })
     .then((result) => {
       console.log(result);
       if (result?.completed) {
-        console.log(`Transaction correctly processed!
-          Block: ${result.block.header.level}
-          Chain ID: ${result.block.chain_id}`);
+        options?.onCompleted?.()
+        console.log(`tx correctly processed!
+          block: ${result.block.header.level}
+          chain id: ${result.block.chain_id}`);
       } else {
-        alert('An error has occurred')
+        options?.onFailed?.()
+        alert(`oops, there's def something wrong here. sry bout that :/ please @caaatisgood`);
       }
     })
     .catch((err) => alert(err));
-}
-
-export const viewWipGenesis = async (addr: string) => {
-  return Tezos.wallet.at(KT_ADDRESS)
-    .then((contract) => contract.contractViews.user_wip({ addr, id: 0 }))
-    .then(viewResult => viewResult.executeView({ viewCaller: KT_ADDRESS }))
-    .then(result => {
-      console.log(result)
-    })
 }
