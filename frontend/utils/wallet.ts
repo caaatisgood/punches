@@ -4,7 +4,7 @@ import { NetworkType } from '@airgap/beacon-types'
 
 import { KT_ADDRESS } from '../config'
 
-const Tezos = new TezosToolkit('https://ghostnet.ecadinfra.com');
+export const Tezos = new TezosToolkit('https://ghostnet.ecadinfra.com');
 
 let wallet: BeaconWallet
 
@@ -32,7 +32,6 @@ export const getWallet = (): BeaconWallet => {
 }
 
 export const callSetWip = async (wip: string) => {
-  console.log(await Tezos.wallet.at(KT_ADDRESS))
   Tezos.wallet.at(KT_ADDRESS)
     .then((contract) => {
       console.log(contract)
@@ -53,4 +52,13 @@ export const callSetWip = async (wip: string) => {
       }
     })
     .catch((err) => alert(err));
+}
+
+export const viewWipGenesis = async (addr: string) => {
+  return Tezos.wallet.at(KT_ADDRESS)
+    .then((contract) => contract.contractViews.user_wip({ addr, id: 0 }))
+    .then(viewResult => viewResult.executeView({ viewCaller: KT_ADDRESS }))
+    .then(result => {
+      console.log(result)
+    })
 }
