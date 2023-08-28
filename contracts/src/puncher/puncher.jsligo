@@ -312,6 +312,29 @@ const get_punches = (_: unit, store: Storage): list<Punch> => {
 };
 
 // @view
+const get_punches_of_wip = (
+  { addr, id }: { addr: address, id: WipId },
+  store: Storage
+): list<Punch> => {
+  const { punches, tickets, wips, houses, punch_count, punch_cd, wip_chars, note_chars, house_set, admin, paused } = store;
+  const wipMap: WipMap = match((Big_map.find_opt(addr, wips)), {
+    Some: (wipMap: WipMap) => wipMap,
+    None: () => failwith(Errors.wip_not_found),
+  });
+  const wipObj: Wip = match((Map.find_opt(id, wipMap)), {
+    Some: (wipObj: Wip) => wipObj,
+    None: () => failwith(Errors.wip_not_found),
+  });
+  const findPunch = (punch_id: nat): Punch => {
+    return match(Big_map.find_opt(punch_id, punches), {
+      Some: (punch: Punch) => punch,
+      None: () => failwith(Errors.punch_not_found),
+    });
+  };
+  return List.map(findPunch, wipObj.punch_ids);
+};
+
+// @view
 const get_punch = (id: nat, store: Storage): Punch => {
   const { punches, tickets, wips, houses, punch_count, punch_cd, wip_chars, note_chars, house_set, admin, paused } = store;
   return match((Big_map.find_opt(id, punches)), {
