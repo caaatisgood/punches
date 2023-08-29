@@ -18,6 +18,8 @@ interface UserStore {
   address?: string;
   wip?: Wip;
   punches?: any;
+  hasSyncedWip: boolean;
+  isSyncingWip: boolean;
   sync: () => OperationReturn;
   unsync: () => void;
   syncWip: () => Promise<void | undefined>;
@@ -50,13 +52,15 @@ if (typeof window !== "undefined") {
       address,
     })
     await useUserStore.getState().syncWip()
-    if (useUserStore.getState().wip?.punch_ids?.length) {
-    }
+    // if (useUserStore.getState().wip?.punch_ids?.length) {
+    // }
   }).catch(() => {})
 }
 
 export const useUserStore = create<UserStore>((set, get) => ({
   debug: () => console.log('dafuq?'),
+  hasSyncedWip: false,
+  isSyncingWip: false,
   sync: async () => {
     const network = {
       type: DEFAULT_NETWORK,
@@ -88,6 +92,7 @@ export const useUserStore = create<UserStore>((set, get) => ({
   },
   syncWip: async () => {
     // fetch genesis wip
+    set({ isSyncingWip: true })
     const addr = get().address
     await Tezos.wallet.at(KT_ADDRESS)
       .then((contract) => contract.contractViews.get_wip({ addr, id: 0 }))
@@ -100,10 +105,21 @@ export const useUserStore = create<UserStore>((set, get) => ({
         }
         set({ wip });
       })
-      .catch((error) => console.log("failed to get_wip ///", error))
+      .catch((error) => {
+        console.log("failed to get_wip ///", error)
+        set({ isSyncingWip: false })
+      })
     if (!get().wip) {
+      set({
+        isSyncingWip: false,
+        hasSyncedWip: true,
+      })
       return
     }
+    set({
+      isSyncingWip: false,
+      hasSyncedWip: true,
+    })
     await Tezos.wallet.at(KT_ADDRESS)
       .then((contract) => contract.contractViews.get_punches_of_wip({ addr, id: 0 }))
       .then(viewResult => viewResult.executeView({ viewCaller: KT_ADDRESS }))

@@ -41,7 +41,7 @@ export const callGenesisWip = async (
   }
 ) => {
   Tezos.wallet.at(KT_ADDRESS)
-    .then((contract) => contract.methods.genesis_wip({ text, house }).send())
+    .then((contract) => contract.methods.genesis_wip(text, house).send())
     .then((op) => {
       options?.onWaitingToBeConfirmed?.(op.opHash)
       return op.confirmation();
