@@ -33,12 +33,15 @@ type Storage = {
   paused: bool,
 };
 
+type House = string;
+type Text = string;
+
 type Parameter =
   // permissionless
-  | ["Genesis_wip", { text: string, house: string }]
-  | ["Set_wip", string]
-  | ["Update_wip", { text: string, id: WipId }]
-  | ["Punch", { text: string, id: WipId }]
+  | ["Genesis_wip", [Text, House]]
+  | ["Set_wip", Text]
+  | ["Update_wip", [WipId, Text]]
+  | ["Punch", [WipId, Text]]
   | ["Activate_wip", WipId]
   | ["Deactivate_wip", WipId]
   // admin
@@ -69,7 +72,7 @@ const _assertWipLen = (text: string, wip_max_chars: nat) => {
 
 const genesisWip = (
   { punches, tickets, wips, houses, punch_count, punch_cd, wip_text_max_len, punch_text_max_len, house_set, admin, paused }: Storage,
-  { text, house }: { text: string, house: string }
+  [text, house]: [Text, House]
 ) => {
   assert_with_error(!paused, Errors.kt_paused);
   _assertWipLen(text, wip_text_max_len);
@@ -111,7 +114,7 @@ const setWip = (
 
 const updateWip = (
   { punches, tickets, wips, houses, punch_count, punch_cd, wip_text_max_len, punch_text_max_len, house_set, admin, paused }: Storage,
-  { text, id }: { text: string, id: nat }
+  [id, text]: [WipId, Text]
 ): Storage => {
   assert_with_error(!paused, Errors.kt_paused);
   _assertWipLen(text, wip_text_max_len);
@@ -131,7 +134,7 @@ const updateWip = (
 
 const punch = (
   { punches, tickets, wips, houses, punch_count, punch_cd, wip_text_max_len, punch_text_max_len, house_set, admin, paused }: Storage,
-  { text, id }: { text: string, id: WipId }
+  [id, text]: [WipId, Text]
 ): Storage => {
   assert_with_error(!paused, Errors.kt_paused);
   assert_with_error(String.length(text) <= punch_text_max_len, Errors.punch_max_len_exceeded);
