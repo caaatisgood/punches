@@ -70,7 +70,7 @@ export const useUserStore = create<UserStore>((set, get) => ({
   debug: () => console.log('dafuq?'),
   hasSyncedWip: false,
   isSyncingWip: false,
-  isSyncingPunches: true,
+  isSyncingPunches: false,
   sync: async () => {
     const network = {
       type: DEFAULT_NETWORK,
@@ -91,6 +91,7 @@ export const useUserStore = create<UserStore>((set, get) => ({
     set({
       address,
     })
+    get().syncWip();
     return address
   },
   unsync: async () => {

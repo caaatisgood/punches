@@ -71,7 +71,6 @@ const Page = () => {
   const { address, wip, sync, syncWip, hasSyncedWip, isSyncingWip, punches, syncPunches, isSyncingPunches } = useUserStore()
 
   const lastPunchAt = punches?.[0]?.punchedAt
-  console.log(lastPunchAt)
   const nextPunchAt = getNextPunchAt(lastPunchAt)
 
   useEffect(() => {
