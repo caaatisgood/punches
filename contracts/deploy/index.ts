@@ -44,11 +44,15 @@ Tezos.setProvider({ signer: signer });
 
 async function deployPuncher() {
   let factory_store = {
-    token_count: 0,
+    punches: new MichelsonMap(),
     tickets: new MichelsonMap(),
     wips: new MichelsonMap(),
-    wip_chars: 100,
-    note_chars: 50,
+    houses: new MichelsonMap(),
+    punch_count: 0,
+    punch_cd: 86_400, // one day
+    wip_text_max_len: 100,
+    punch_text_max_len: 50,
+    house_set: ["erevald", "gaudmire", "alterok", "spectreseek"],
     admin: adminAddr,
     paused: false,
   };

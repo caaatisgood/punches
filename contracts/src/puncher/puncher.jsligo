@@ -1,268 +1,398 @@
+#import "errors.jsligo" "Errors"
+
 type WipId = nat;
 
 type Wip = {
   id: WipId,
-  wip: string,
-  tokens: list<nat>,
+  text: string,
+  punch_ids: list<nat>,
   active: bool,
+  set_at: timestamp,
 };
 
-type TokenData = big_map<nat, {
+type WipMap = map<WipId, Wip>;
+
+type Punch = {
+  id: nat,
   wip_id: nat,
-  note: string,
-  mood: int, // default: -1, 1 ~ 10
-}>;
+  text: string,
+  punched_at: timestamp,
+};
 
 type Storage = {
-  token_count: nat,
+  punches: big_map<nat, Punch>,
   tickets: big_map<nat, ticket<nat>>,
-  wips: big_map<address, map<WipId, Wip>>,
-  wip_chars: nat, // prob ~100
-  note_chars: nat, // prob ~50
+  wips: big_map<address, WipMap>,
+  houses: big_map<address, string>,
+  punch_count: nat,
+  punch_cd: nat,
+  wip_text_max_len: nat,
+  punch_text_max_len: nat,
+  house_set: set<string>,
   admin: address,
   paused: bool,
 };
 
+type House = string;
+type Text = string;
+
 type Parameter =
   // permissionless
-  | ["Set_wip", string]
-  | ["Update_wip", { wip: string, id: WipId }]
-  | ["Punch", { note: string, id: WipId }]
+  | ["Genesis_wip", [Text, House]]
+  | ["Set_wip", Text]
+  | ["Update_wip", [WipId, Text]]
+  | ["Punch", [WipId, Text]]
   | ["Activate_wip", WipId]
   | ["Deactivate_wip", WipId]
   // admin
-  | ["Set_wip_chars", nat]
-  | ["Set_note_chars", nat]
+  | ["Set_punch_cd", nat]
+  | ["Set_wip_text_max_len", nat]
+  | ["Set_punch_text_max_len", nat]
   | ["Set_pause", bool];
 
 type Return = [list<operation>, Storage];
 
-const setWip = (
-  { token_count, tickets, wips, admin, wip_chars, note_chars, paused }: Storage,
-  wip: string
-): Storage => {
-  if (paused) {
-    failwith("PAUSED");
-  }
-  const sender = Tezos.get_sender();
-  const wipMap: map<WipId, Wip> = match((Big_map.find_opt(sender, wips)), {
-    Some: (wipMap: map<WipId, Wip>) => wipMap,
-    None: () => (Map.empty as map<WipId, Wip>),
-  });
-  if (String.length(wip) > wip_chars) {
-    failwith("WIP_EXCEEDS_MAX_LEN");
-  }
+const _insertWip = (text: string, wipMap): WipMap => {
   const id: nat = Map.size(wipMap);
   const newWip: Wip = {
     id,
-    wip,
-    tokens: (list([]) as list<nat>),
+    text,
+    punch_ids: (list([]) as list<nat>),
     active: true,
+    set_at: Tezos.get_now(),
   };
-  const updatedWipMap = Map.add(id, newWip, wipMap);
+  return Map.add(id, newWip, wipMap);
+};
+
+const _assertWipLen = (text: string, wip_max_chars: nat) => {
+  const wipLen: nat = String.length(text);
+  assert_with_error(wipLen > (0 as nat), Errors.wip_cannot_be_empty);
+  assert_with_error(wipLen <= wip_max_chars, Errors.wip_max_len_exceeded);
+};
+
+const genesisWip = (
+  { punches, tickets, wips, houses, punch_count, punch_cd, wip_text_max_len, punch_text_max_len, house_set, admin, paused }: Storage,
+  [text, house]: [Text, House]
+) => {
+  assert_with_error(!paused, Errors.kt_paused);
+  _assertWipLen(text, wip_text_max_len);
+  assert_with_error(Set.mem(house, house_set), Errors.invalid_house);
+  const sender = Tezos.get_sender();
+  const wipMap: WipMap = match((Big_map.find_opt(sender, wips)), {
+    Some: (wipMap: WipMap) => failwith(Errors.has_genesis_wip_already),
+    None: () => (Map.empty as WipMap),
+  });
+  const updatedHouses = Big_map.add(sender, house, houses);
+  const updatedWipMap = _insertWip(text, wipMap);
   const updatedWips = Big_map.update(
     sender,
     Some(updatedWipMap),
     wips
   );
-  return { token_count, tickets, wips: updatedWips, admin, wip_chars, note_chars, paused };
+  return { punches, tickets, wips: updatedWips, houses: updatedHouses, punch_count, punch_cd, wip_text_max_len, punch_text_max_len, house_set, admin, paused };
+};
+
+const setWip = (
+  { punches, tickets, wips, houses, punch_count, punch_cd, wip_text_max_len, punch_text_max_len, house_set, admin, paused }: Storage,
+  text: string
+): Storage => {
+  assert_with_error(!paused, Errors.kt_paused);
+  _assertWipLen(text, wip_text_max_len);
+  const sender = Tezos.get_sender();
+  const wipMap: WipMap = match((Big_map.find_opt(sender, wips)), {
+    Some: (wipMap: WipMap) => wipMap,
+    None: () => failwith(Errors.has_no_genesis_wip),
+  });
+  const updatedWipMap = _insertWip(text, wipMap);
+  const updatedWips = Big_map.update(
+    sender,
+    Some(updatedWipMap),
+    wips
+  );
+  return { punches, tickets, wips: updatedWips, houses, punch_count, punch_cd, wip_text_max_len, punch_text_max_len, house_set, admin, paused };
 };
 
 const updateWip = (
-  { token_count, tickets, wips, admin, wip_chars, note_chars, paused }: Storage,
-  { wip, id }: { wip: string, id: nat }
+  { punches, tickets, wips, houses, punch_count, punch_cd, wip_text_max_len, punch_text_max_len, house_set, admin, paused }: Storage,
+  [id, text]: [WipId, Text]
 ): Storage => {
-  if (paused) {
-    failwith("PAUSED");
-  }
+  assert_with_error(!paused, Errors.kt_paused);
+  _assertWipLen(text, wip_text_max_len);
   const sender = Tezos.get_sender();
-  const wipMap: map<WipId, Wip> = match((Big_map.find_opt(sender, wips)), {
-    Some: (wipMap: map<WipId, Wip>) => wipMap,
-    None: () => failwith("NOT_FOUND"),
+  const wipMap: WipMap = match((Big_map.find_opt(sender, wips)), {
+    Some: (wipMap: WipMap) => wipMap,
+    None: () => failwith(Errors.wip_not_found),
   });
   const wipObj: Wip = match((Map.find_opt(id, wipMap)), {
     Some: (wipObj: Wip) => wipObj,
-    None: () => failwith("NOT_FOUND"),
+    None: () => failwith(Errors.wip_not_found),
   });
-  if (String.length(wip) > wip_chars) {
-    failwith("WIP_EXCEEDS_MAX_LEN");
-  }
-  const updatedWipMap = Map.update(id, Some({ ...wipObj, wip }), wipMap);
+  const updatedWipMap = Map.update(id, Some({ ...wipObj, text }), wipMap);
   const updatedWips = Big_map.update(sender, Some(updatedWipMap), wips);
-  return { token_count, tickets, wips: updatedWips, admin, wip_chars, note_chars, paused };
+  return { punches, tickets, wips: updatedWips, houses, punch_count, punch_cd, wip_text_max_len, punch_text_max_len, house_set, admin, paused };
 };
 
 const punch = (
-  { token_count, tickets, wips, admin, wip_chars, note_chars, paused }: Storage,
-  { note, id }: { note: string, id: WipId }
+  { punches, tickets, wips, houses, punch_count, punch_cd, wip_text_max_len, punch_text_max_len, house_set, admin, paused }: Storage,
+  [id, text]: [WipId, Text]
 ): Storage => {
-  if (paused) {
-    failwith("PAUSED");
-  }
+  assert_with_error(!paused, Errors.kt_paused);
+  assert_with_error(String.length(text) <= punch_text_max_len, Errors.punch_max_len_exceeded);
   const sender = Tezos.get_sender();
-  const wipMap: map<WipId, Wip> = match((Big_map.find_opt(sender, wips)), {
-    Some: (wipMap: map<WipId, Wip>) => wipMap,
-    None: () => failwith("NOT_FOUND"),
+  const wipMap: WipMap = match((Big_map.find_opt(sender, wips)), {
+    Some: (wipMap: WipMap) => wipMap,
+    None: () => failwith(Errors.wip_not_found),
   });
   const wipObj: Wip = match((Map.find_opt(id, wipMap)), {
     Some: (wipObj: Wip) => wipObj,
-    None: () => failwith("NOT_FOUND"),
+    None: () => failwith(Errors.wip_not_found),
   });
-  if (String.length(note) > note_chars) {
-    failwith("NOTE_EXCEEDS_MAX_LEN");
-  }
-  const ticketId: nat = token_count + (1 as nat);
-  const ticket_: ticket<nat> = Option.unopt(Tezos.create_ticket(ticketId, 1 as nat));
-  const [_, updatedTickets] = Big_map.get_and_update(ticketId, Some(ticket_), tickets);
-  const updatedWipMap = Map.update( id,
+  assert_with_error(wipObj.active, Errors.wip_inactive);
+  match((List.head_opt(wipObj.punch_ids)), {
+    Some: (id: nat) => {
+      const punch: Punch = match(Big_map.find_opt(id, punches), {
+        Some: (punch) => punch,
+        None: () => failwith(Errors.punch_not_found),
+      });
+      const nextPunch: timestamp = (punch.punched_at + int(punch_cd)) as timestamp;
+      assert_with_error(
+        Tezos.get_now() >= nextPunch,
+        Errors.punch_limit_exceeded
+      );
+    },
+    None: () => unit,
+  });
+  const punchId: nat = punch_count;
+  const ticket_: ticket<nat> = Option.unopt(Tezos.create_ticket(punchId, 1 as nat));
+  const [_, updatedTickets] = Big_map.get_and_update(punchId, Some(ticket_), tickets);
+  const updatedWipMap = Map.update(id,
     Some({
       ...wipObj,
-      tokens: list([ticketId, ...wipObj.tokens]),
+      punch_ids: list([punchId, ...wipObj.punch_ids]),
     }),
     wipMap
   );
   const updatedWips = Big_map.update(sender, Some(updatedWipMap), wips);
+  const punch: Punch = {
+    id: punchId,
+    wip_id: id,
+    text,
+    punched_at: Tezos.get_now(),
+  };
+  const updatedPunches = Big_map.add(punchId, punch, punches);
   return {
-    token_count: ticketId,
+    punches: updatedPunches,
     tickets: updatedTickets,
     wips: updatedWips,
+    houses,
+    punch_count: punchId + (1 as nat),
+    punch_cd,
+    wip_text_max_len,
+    punch_text_max_len,
+    house_set,
     admin,
-    wip_chars,
-    note_chars,
     paused,
   };
 };
 
 const activateWip = (
-  { token_count, tickets, wips, admin, wip_chars, note_chars, paused }: Storage,
+  { punches, tickets, wips, houses, punch_count, punch_cd, wip_text_max_len, punch_text_max_len, house_set, admin, paused }: Storage,
   id: WipId
 ): Storage => {
   const sender = Tezos.get_sender();
-  const wipMap: map<WipId, Wip> = match((Big_map.find_opt(sender, wips)), {
-    Some: (wipMap: map<WipId, Wip>) => wipMap,
-    None: () => failwith("NOT_FOUND"),
+  const wipMap: WipMap = match((Big_map.find_opt(sender, wips)), {
+    Some: (wipMap: WipMap) => wipMap,
+    None: () => failwith(Errors.wip_not_found),
   });
   const wipObj: Wip = match((Map.find_opt(id, wipMap)), {
     Some: (wipObj: Wip) => wipObj,
-    None: () => failwith("NOT_FOUND"),
+    None: () => failwith(Errors.wip_not_found),
   });
   if (wipObj.active) {
-    return { token_count, tickets, wips, admin, wip_chars, note_chars, paused };
+    return { punches, tickets, wips, houses, punch_count, punch_cd, wip_text_max_len, punch_text_max_len, house_set, admin, paused };
   }
   const updatedWipMap = Map.update(id, Some({ ...wipObj, active: true }), wipMap);
   const updatedWips = Big_map.update(sender, Some(updatedWipMap), wips);
-  return { token_count, tickets, wips: updatedWips, admin, wip_chars, note_chars, paused };
+  return { punches, tickets, wips: updatedWips, houses, punch_count, punch_cd, wip_text_max_len, punch_text_max_len, house_set, admin, paused };
 };
 
 const deactivateWip = (
-  { token_count, tickets, wips, admin, wip_chars, note_chars, paused }: Storage,
+  { punches, tickets, wips, houses, punch_count, punch_cd, wip_text_max_len, punch_text_max_len, house_set, admin, paused }: Storage,
   id: WipId
 ): Storage => {
   const sender = Tezos.get_sender();
-  const wipMap: map<WipId, Wip> = match((Big_map.find_opt(sender, wips)), {
-    Some: (wipMap: map<WipId, Wip>) => wipMap,
-    None: () => failwith("NOT_FOUND"),
+  const wipMap: WipMap = match((Big_map.find_opt(sender, wips)), {
+    Some: (wipMap: WipMap) => wipMap,
+    None: () => failwith(Errors.wip_not_found),
   });
   const wipObj: Wip = match((Map.find_opt(id, wipMap)), {
     Some: (wipObj: Wip) => wipObj,
-    None: () => failwith("NOT_FOUND"),
+    None: () => failwith(Errors.wip_not_found),
   });
   if (!wipObj.active) {
-    return { token_count, tickets, wips, admin, wip_chars, note_chars, paused };
+    return { punches, tickets, wips, houses, punch_count, punch_cd, wip_text_max_len, punch_text_max_len, house_set, admin, paused };
   }
   const updatedWipMap = Map.update(id, Some({ ...wipObj, active: false }), wipMap);
   const updatedWips = Big_map.update(sender, Some(updatedWipMap), wips);
-  return { token_count, tickets, wips: updatedWips, admin, wip_chars, note_chars, paused };
+  return { punches, tickets, wips: updatedWips, houses, punch_count, punch_cd, wip_text_max_len, punch_text_max_len, house_set, admin, paused };
 };
 
-const setWipChars = (
-  { token_count, tickets, wips, admin, wip_chars, note_chars, paused }: Storage,
-  chars: nat
+const setPunchCd = (
+  { punches, tickets, wips, houses, punch_count, punch_cd, wip_text_max_len, punch_text_max_len, house_set, admin, paused }: Storage,
+  cd: nat
 ): Storage => {
-  assert_with_error((Tezos.get_sender() == admin), "INSUFFICIENT_PERMISSION");
-  return { token_count, tickets, wips, admin, wip_chars: chars, note_chars, paused };
+  assert_with_error((Tezos.get_sender() == admin), Errors.not_allowed);
+  return { punches, tickets, wips, houses, punch_count, punch_cd: cd, wip_text_max_len, punch_text_max_len, house_set, admin, paused };
 };
 
-const setNoteChars = (
-  { token_count, tickets, wips, admin, wip_chars, note_chars, paused }: Storage,
+const setWipTextMaxLen = (
+  { punches, tickets, wips, houses, punch_count, punch_cd, wip_text_max_len, punch_text_max_len, house_set, admin, paused }: Storage,
   chars: nat
 ): Storage => {
-  assert_with_error((Tezos.get_sender() == admin), "INSUFFICIENT_PERMISSION");
-  return { token_count, tickets, wips, admin, wip_chars, note_chars: chars, paused };
+  assert_with_error((Tezos.get_sender() == admin), Errors.not_allowed);
+  return { punches, tickets, wips, houses, punch_count, punch_cd, wip_text_max_len: chars, punch_text_max_len, house_set, admin, paused };
+};
+
+const setPunchTextMaxLen = (
+  { punches, tickets, wips, houses, punch_count, punch_cd, wip_text_max_len, punch_text_max_len, house_set, admin, paused }: Storage,
+  chars: nat
+): Storage => {
+  assert_with_error((Tezos.get_sender() == admin), Errors.not_allowed);
+  return { punches, tickets, wips, houses, punch_count, punch_cd, wip_text_max_len, punch_text_max_len: chars, house_set, admin, paused };
 };
 
 const setPause = (
-  { token_count, tickets, wips, admin, wip_chars, note_chars, paused }: Storage,
+  { punches, tickets, wips, houses, punch_count, punch_cd, wip_text_max_len, punch_text_max_len, house_set, admin, paused }: Storage,
   paused_: bool
 ) => {
-  assert_with_error((Tezos.get_sender() == admin), "INSUFFICIENT_PERMISSION");
-  return { token_count, tickets, wips, admin, wip_chars, note_chars, paused: paused_ };
+  assert_with_error((Tezos.get_sender() == admin), Errors.not_allowed);
+  return { punches, tickets, wips, houses, punch_count, punch_cd, wip_text_max_len, punch_text_max_len, house_set, admin, paused: paused_ };
 }
 
 const main = (parameter: Parameter, store: Storage): Return => {
   return [
     list([]),
-    (match (parameter, {
+    (match(parameter, {
+      Genesis_wip: (params) => genesisWip(store, params),
       Set_wip: (wip: string) => setWip(store, wip),
       Update_wip: (params) => updateWip(store, params),
       Punch: (params) => punch(store, params),
       Activate_wip: (wip_id: WipId) => activateWip(store, wip_id),
       Deactivate_wip: (wip_id: WipId) => deactivateWip(store, wip_id),
-      Set_wip_chars: (chars: nat) => setWipChars(store, chars),
-      Set_note_chars: (chars: nat) => setNoteChars(store, chars),
+      Set_punch_cd: (cd: nat) => setPunchCd(store, cd),
+      Set_wip_text_max_len: (chars: nat) => setWipTextMaxLen(store, chars),
+      Set_punch_text_max_len: (chars: nat) => setPunchTextMaxLen(store, chars),
       Set_pause: (paused: bool) => setPause(store, paused),
     }))
   ];
 };
 
 // @view
-const token_exist = (id: nat, store: Storage): bool => {
-  const { token_count, tickets, wips, admin, wip_chars, note_chars, paused } = store;
-  return id < token_count;
+const punch_exist = (id: nat, store: Storage): bool => {
+  const { punches, tickets, wips, houses, punch_count, punch_cd, wip_text_max_len, punch_text_max_len, house_set, admin, paused } = store;
+  return id < punch_count;
 };
 
 // @view
-const user_wips = (addr: address, store: Storage): map<WipId, Wip> => {
-  const { token_count, tickets, wips, admin, wip_chars, note_chars, paused } = store;
-  return match((Big_map.find_opt(addr, wips)), {
-    Some: (wipMap: map<WipId, Wip>) => wipMap,
-    None: () => failwith("NOT_FOUND"),
-  });
+const get_punch_count = (_: unit, store: Storage): nat => {
+  const { punches, tickets, wips, houses, punch_count, punch_cd, wip_text_max_len, punch_text_max_len, house_set, admin, paused } = store;
+  return punch_count;
 };
 
 // @view
-const user_wip = (
+const get_punches = (_: unit, store: Storage): list<Punch> => {
+  const { punches, tickets, wips, houses, punch_count, punch_cd, wip_text_max_len, punch_text_max_len, house_set, admin, paused } = store;
+  let punchList: list<Punch> = list([]);
+  for (let i: nat = 0 as nat; i < punch_count; i += (1 as nat)) {
+    match(Big_map.find_opt(i, punches), {
+      Some: (punch: Punch) => {
+        punchList = list([punch, ...punchList]);
+      },
+      None: () => unit,
+    });
+  };
+  return punchList;
+};
+
+// @view
+const get_punches_of_wip = (
   { addr, id }: { addr: address, id: WipId },
   store: Storage
-): Wip => {
-  const { token_count, tickets, wips, admin, wip_chars, note_chars, paused } = store;
-  const wipMap: map<WipId, Wip> = match((Big_map.find_opt(addr, wips)), {
-    Some: (wipMap: map<WipId, Wip>) => wipMap,
-    None: () => failwith("NOT_FOUND"),
-  });
-  return match((Map.find_opt(id, wipMap)), {
-    Some: (wipObj: Wip) => wipObj,
-    None: () => failwith("NOT_FOUND"),
-  });
-};
-
-// @view
-const is_wip_active = (
-  { addr, id }: { addr: address, id: WipId },
-  store: Storage
-): bool => {
-  const { token_count, tickets, wips, admin, wip_chars, note_chars, paused } = store;
-  const wipMap: map<WipId, Wip> = match((Big_map.find_opt(addr, wips)), {
-    Some: (wipMap: map<WipId, Wip>) => wipMap,
-    None: () => failwith("NOT_FOUND"),
+): list<Punch> => {
+  const { punches, tickets, wips, houses, punch_count, punch_cd, wip_text_max_len, punch_text_max_len, house_set, admin, paused } = store;
+  const wipMap: WipMap = match((Big_map.find_opt(addr, wips)), {
+    Some: (wipMap: WipMap) => wipMap,
+    None: () => failwith(Errors.wip_not_found),
   });
   const wipObj: Wip = match((Map.find_opt(id, wipMap)), {
     Some: (wipObj: Wip) => wipObj,
-    None: () => failwith("NOT_FOUND"),
+    None: () => failwith(Errors.wip_not_found),
   });
-  return wipObj.active;
+  const findPunch = (punch_id: nat): Punch => {
+    return match(Big_map.find_opt(punch_id, punches), {
+      Some: (punch: Punch) => punch,
+      None: () => failwith(Errors.punch_not_found),
+    });
+  };
+  return List.map(findPunch, wipObj.punch_ids);
 };
 
-// kinda complex, not sure if it's needed
-// const user_wip_of_token = (id: WipId, store: Storage) => {
-// };
+// @view
+const get_punch = (id: nat, store: Storage): Punch => {
+  const { punches, tickets, wips, houses, punch_count, punch_cd, wip_text_max_len, punch_text_max_len, house_set, admin, paused } = store;
+  return match((Big_map.find_opt(id, punches)), {
+    Some: (punch: Punch) => punch,
+    None: () => failwith(Errors.wip_not_found),
+  });
+};
+
+// @view
+const get_wips = (addr: address, store: Storage): WipMap => {
+  const { punches, tickets, wips, houses, punch_count, punch_cd, wip_text_max_len, punch_text_max_len, house_set, admin, paused } = store;
+  return match((Big_map.find_opt(addr, wips)), {
+    Some: (wipMap: WipMap) => wipMap,
+    None: () => failwith(Errors.wip_not_found),
+  });
+};
+
+// @view
+const get_wip = (
+  { addr, id }: { addr: address, id: WipId },
+  store: Storage
+): Wip => {
+  const { punches, tickets, wips, houses, punch_count, punch_cd, wip_text_max_len, punch_text_max_len, house_set, admin, paused } = store;
+  const wipMap: WipMap = match((Big_map.find_opt(addr, wips)), {
+    Some: (wipMap: WipMap) => wipMap,
+    None: () => failwith(Errors.wip_not_found),
+  });
+  return match((Map.find_opt(id, wipMap)), {
+    Some: (wipObj: Wip) => wipObj,
+    None: () => failwith(Errors.wip_not_found),
+  });
+};
+
+// @view
+const wen_can_punch = (
+  { addr, id }: { addr: address, id: WipId },
+  store: Storage
+): timestamp => {
+  const { punches, tickets, wips, houses, punch_count, punch_cd, wip_text_max_len, punch_text_max_len, house_set, admin, paused } = store;
+  const wipMap: WipMap = match((Big_map.find_opt(addr, wips)), {
+    Some: (wipMap: WipMap) => wipMap,
+    None: () => failwith(Errors.wip_not_found),
+  });
+  const wipObj = match((Map.find_opt(id, wipMap)), {
+    Some: (wipObj: Wip) => wipObj,
+    None: () => failwith(Errors.wip_not_found),
+  });
+  return match((List.head_opt(wipObj.punch_ids)), {
+    Some: (id: nat) => {
+      const punch: Punch = match(Big_map.find_opt(id, punches), {
+        Some: (punch) => punch,
+        None: () => failwith(Errors.punch_not_found),
+      });
+      return (punch.punched_at + int(punch_cd)) as timestamp;
+    },
+    None: () => 0 as timestamp,
+  });
+};
