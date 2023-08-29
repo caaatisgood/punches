@@ -9,20 +9,28 @@ type OperationReturn = Promise<string | undefined>
 
 type Wip = {
   id: number;
-  punch_ids: number[];
-  set_at: string;
+  punchIds: number[];
+  setAt: string;
   text: string;
+}
+type Punch = {
+  id: number;
+  punchedAt: string;
+  wipId: number;
+  text: string | undefined;
 }
 
 interface UserStore {
   address?: string;
   wip?: Wip;
-  punches?: any;
+  punches?: Punch[];
   hasSyncedWip: boolean;
   isSyncingWip: boolean;
+  isSyncingPunches: boolean;
   sync: () => OperationReturn;
   unsync: () => void;
   syncWip: () => Promise<void | undefined>;
+  syncPunches: () => Promise<void | undefined>;
   debug: () => void;
 }
 
@@ -52,8 +60,9 @@ if (typeof window !== "undefined") {
       address,
     })
     await useUserStore.getState().syncWip()
-    // if (useUserStore.getState().wip?.punch_ids?.length) {
-    // }
+    if (useUserStore.getState().wip?.punchIds?.length) {
+      await useUserStore.getState().syncPunches()
+    }
   }).catch(() => {})
 }
 
@@ -61,6 +70,7 @@ export const useUserStore = create<UserStore>((set, get) => ({
   debug: () => console.log('dafuq?'),
   hasSyncedWip: false,
   isSyncingWip: false,
+  isSyncingPunches: true,
   sync: async () => {
     const network = {
       type: DEFAULT_NETWORK,
@@ -99,9 +109,10 @@ export const useUserStore = create<UserStore>((set, get) => ({
       .then(viewResult => viewResult.executeView({ viewCaller: KT_ADDRESS }))
       .then(result => {
         const wip: Wip = {
-          ...result,
           id: result.id.toNumber(),
-          punch_ids: result.punch_ids.map((bn: any) => bn.toNumber()),
+          punchIds: result.punch_ids.map((bn: any) => bn.toNumber()),
+          setAt: result.set_at,
+          text: result.text,
         }
         set({ wip });
       })
@@ -120,14 +131,34 @@ export const useUserStore = create<UserStore>((set, get) => ({
       isSyncingWip: false,
       hasSyncedWip: true,
     })
+    get().syncPunches()
+  },
+  syncPunches: async() => {
+    set({
+      isSyncingPunches: true,
+    })
+    const addr = get().address
     await Tezos.wallet.at(KT_ADDRESS)
       .then((contract) => contract.contractViews.get_punches_of_wip({ addr, id: 0 }))
       .then(viewResult => viewResult.executeView({ viewCaller: KT_ADDRESS }))
-      .then(result => {
+      .then((result: any[]) => {
         set({
-          punches: result,
+          punches: result.map((punch) => ({
+            id: punch.id.toNumber(),
+            punchedAt: punch.punched_at,
+            wipId: punch.wip_id.toNumber(),
+            text: punch.text,
+          })),
         })
       })
-      .catch((error) => console.log("failed to get_punches_of_wip ///", error))
+      .catch((error) => {
+        set({
+          isSyncingPunches: false,
+        })
+        console.log("failed to get_punches_of_wip ///", error)
+      })
+    set({
+      isSyncingPunches: false,
+    })
   },
 }))

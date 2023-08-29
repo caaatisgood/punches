@@ -31,14 +31,16 @@ export const getWallet = (): BeaconWallet => {
   return wallet
 }
 
+type KtCallOptions = {
+  onWaitingToBeConfirmed?: (hash: string) => void;
+  onCompleted?: () => void;
+  onFailed?: () => void;
+}
+
 export const callGenesisWip = async (
   text: string,
   house: House,
-  options?: {
-    onWaitingToBeConfirmed?: (hash: string) => void;
-    onCompleted?: () => void;
-    onFailed?: () => void;
-  }
+  options?: KtCallOptions
 ) => {
   Tezos.wallet.at(KT_ADDRESS)
     .then((contract) => contract.methods.genesis_wip(text, house).send())
@@ -47,7 +49,6 @@ export const callGenesisWip = async (
       return op.confirmation();
     })
     .then((result) => {
-      console.log(result);
       if (result?.completed) {
         options?.onCompleted?.()
         console.log(`tx correctly processed!
@@ -59,4 +60,27 @@ export const callGenesisWip = async (
       }
     })
     .catch((err) => console.log(err));
+}
+
+export const callPunch = async (
+  text: string,
+  options?: KtCallOptions
+) => {
+  await Tezos.wallet.at(KT_ADDRESS)
+    .then((contract) => contract.methods.punch(0, text).send())
+    .then((op) => {
+      options?.onWaitingToBeConfirmed?.(op.opHash)
+      return op.confirmation();
+    })
+    .then((result) => {
+      if (result?.completed) {
+        options?.onCompleted?.()
+        console.log(`tx correctly processed!
+          block: ${result.block.header.level}
+          chain id: ${result.block.chain_id}`);
+      } else {
+        options?.onFailed?.()
+        alert(`oops, there's def something wrong here. sry bout that :/ please @caaatisgood`);
+      }
+    })
 }
