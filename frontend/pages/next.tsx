@@ -6,9 +6,22 @@ import { HOUSE_MAP } from '@/constants/house'
 import { callGenesisWip, callPunch } from '@/utils/wallet'
 import { useUserStore } from '@/store/userStore'
 import Header from '@/components/Header'
+import Countdown from '@/components/Countdown'
 
 const WIP_TEXT_MAX_LEN = 100
 const PUNCH_TEXT_MAX_LEN = 50
+const PUNCH_CD = 86_400 * 1_000
+
+const isInPunchCd = (dateString: string | undefined) => {
+  if (!dateString) return false
+  return Date.now() < new Date(dateString).getTime() + PUNCH_CD
+}
+const getNextPunchAt = (dateString: string | undefined) => {
+  if (!dateString) {
+    return
+  }
+  return new Date(new Date(dateString).getTime() + PUNCH_CD)
+}
 
 const WIP_PLACEHOLDERS = [
   "building an app to help ppl make consistent progress toward their goal",
@@ -55,7 +68,11 @@ const Page = () => {
   const [justSetGenesisWip, setJustSetGenesisWip] = useState<boolean>(false)
   const [justPunch, setJustPunch] = useState<boolean>(false)
 
-  const { address, wip, sync, syncWip, hasSyncedWip, isSyncingWip, punches, syncPunches } = useUserStore()
+  const { address, wip, sync, syncWip, hasSyncedWip, isSyncingWip, punches, syncPunches, isSyncingPunches } = useUserStore()
+
+  const lastPunchAt = punches?.[0]?.punchedAt
+  console.log(lastPunchAt)
+  const nextPunchAt = getNextPunchAt(lastPunchAt)
 
   useEffect(() => {
     setIsCsrReady(true)
@@ -105,7 +122,6 @@ const Page = () => {
   }
 
   const onSubmitPunch = async (evt: React.FormEvent<HTMLFormElement>) => {
-    console.log('onSubmitPunch')
     evt.preventDefault()
     await callPunch(punchText, {
       onWaitingToBeConfirmed: () => {
@@ -133,7 +149,7 @@ const Page = () => {
   }
 
   const _renderContent = () => {
-    if (isSyncingWip || (address && !hasSyncedWip)) {
+    if (isSyncingWip || isSyncingPunches || (address && !hasSyncedWip)) {
       return (
         "brb..."
       )
@@ -160,6 +176,21 @@ const Page = () => {
               aight see you tmr.
             </p>
             <button className="underline" onClick={punchContinue}>continue {"->"}</button>
+          </>
+        )
+      }
+      if (isInPunchCd(lastPunchAt)) {
+        return (
+          <>
+            <p className="mb-4 text-center">your next punch will be avail in</p>
+            <p className="font-mono mb-4 text-center">
+              {nextPunchAt && (
+                <Countdown date={nextPunchAt} />
+              )}
+            </p>
+            <p className="text-center">
+              you’re either working on wip or on your way to work on it.
+            </p>
           </>
         )
       }
