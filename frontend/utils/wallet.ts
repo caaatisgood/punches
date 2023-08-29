@@ -2,6 +2,7 @@ import { BeaconWallet } from '@taquito/beacon-wallet';
 import { NetworkType } from '@airgap/beacon-types'
 
 import { Tezos } from '@/store/userStore'
+import { House } from '@/types'
 
 import { KT_ADDRESS } from '../config'
 
@@ -31,7 +32,8 @@ export const getWallet = (): BeaconWallet => {
 }
 
 export const callGenesisWip = async (
-  wip: string,
+  text: string,
+  house: House,
   options?: {
     onWaitingToBeConfirmed?: (hash: string) => void;
     onCompleted?: () => void;
@@ -39,7 +41,7 @@ export const callGenesisWip = async (
   }
 ) => {
   Tezos.wallet.at(KT_ADDRESS)
-    .then((contract) => contract.methods.genesis_wip(wip).send())
+    .then((contract) => contract.methods.genesis_wip({ text, house }).send())
     .then((op) => {
       options?.onWaitingToBeConfirmed?.(op.opHash)
       return op.confirmation();
@@ -56,5 +58,5 @@ export const callGenesisWip = async (
         alert(`oops, there's def something wrong here. sry bout that :/ please @caaatisgood`);
       }
     })
-    .catch((err) => alert(err));
+    .catch((err) => console.log(err));
 }

@@ -1,20 +1,32 @@
 import { useState, useEffect } from 'react'
+import clsx from 'clsx'
 
+import { House } from '@/types'
+import { HOUSE_MAP } from '@/constants/house'
 import { callGenesisWip } from '@/utils/wallet'
 import { useUserStore } from '@/store/userStore'
 import Header from '@/components/Header'
 
-const WIP_MAX_CHARS = 100
+const WIP_TEXT_MAX_LEN = 100
+const PUNCH_TEXT_MAX_LEN = 50
 
 const PLACEHOLDERS = [
   "building an app to help ppl make consistent progress toward their goal",
 ]
 
+const ls = {
+  getItem: (key: string) =>
+    typeof window !== "undefined" && window.localStorage.getItem(`punches__${key}`),
+  setItem: (key: string, value: string) => {
+    typeof window !== "undefined" && window?.localStorage.setItem(`punches__${key}`, value)
+  },
+}
+
 const local = {
-  getWip: () =>
-    String(typeof window !== "undefined" && window?.localStorage.getItem("punches_wip") || ""),
-  setWip: (wip: string) =>
-    typeof window !== "undefined" && window?.localStorage.setItem("punches_wip", wip),
+  getWip: () => ls.getItem("wip_text"),
+  setWip: (text: string) => ls.setItem("wip_text", text),
+  getHouse: () => ls.getItem("house") as House || undefined,
+  setHouse: (house: string) => ls.setItem("house", house),
 }
 
 const randPlaceholder = PLACEHOLDERS[Math.floor((Math.random() * PLACEHOLDERS.length))]
@@ -22,36 +34,24 @@ const randPlaceholder = PLACEHOLDERS[Math.floor((Math.random() * PLACEHOLDERS.le
 const Page = () => {
   const [isCsrReady, setIsCsrReady] = useState(false)
   const [wipText, setWipText] = useState(local.getWip() || "")
+  const [house, setHouse] = useState<House>(local.getHouse())
   const [txStatus, setTxStatus] = useState<string | React.ReactNode>()
+  const [justSetGenesisWip, setJustSetGenesisWip] = useState<boolean>(false)
 
   const { address, wip, sync, syncWip } = useUserStore()
 
   useEffect(() => {
     setIsCsrReady(true)
   }, [])
-  // const divRef = useRef<HTMLDivElement>(null)
 
-  // useEffect(() => {
-  //   if (!divRef.current) return
-  //   const divNode = divRef.current
-  //   divNode.focus()
-  //   const onInput = (event: Event) => {
-  //     // @ts-ignore
-  //     const text = event.target?.textContent || ""
-  //     if (text.length > WIP_MAX_CHARS) {
-  //       return
-  //     }
-  //     setWip(text)
-  //   }
-  //   divNode.addEventListener('input', onInput)
-  //   return () => {
-  //     divNode.removeEventListener('input', onInput)
-  //   }
-  // }, [divRef])
+  const updateWip = (wipText: string) => {
+    setWipText(wipText)
+    local.setWip(wipText)
+  }
 
-  const updateWip = (wip: string) => {
-    setWipText(wip)
-    local.setWip(wip)
+  const updateHouse = (house: House) => {
+    setHouse(house)
+    local.setHouse(house)
   }
 
   const onSubmit = async (evt: React.FormEvent<HTMLFormElement>) => {
@@ -60,23 +60,19 @@ const Page = () => {
     if (!address) {
       tempAddr = await sync()
     }
-    if (!tempAddr) {
+    if (!address && !tempAddr) {
       setTxStatus("unable to sync")
       return
     }
-    await callGenesisWip(wipText, {
+    await callGenesisWip(wipText, house, {
       onWaitingToBeConfirmed: () => {
         setTxStatus("your wip is waiting to be confirmed...")
       },
-      onCompleted: () => {
+      onCompleted: async () => {
         updateWip("")
-        syncWip()
-        setTxStatus(
-          <>
-            you&apos;re all set. and you&apos;re amazing.<br />
-            now get back to biz, work on it, and come back to make your first punch.
-          </>
-        )
+        await syncWip()
+        setJustSetGenesisWip(true)
+        setTxStatus("")
       },
     })
   }
@@ -85,63 +81,87 @@ const Page = () => {
     return null
   }
 
-  // check if wallet already set goal
-
   return (
     <>
       <Header />
       <main
         className={`font-sans flex min-h-screen flex-col items-center justify-center p-4`}
       >
-        {/* <h1 className="mb-4 text-center">
-          punches / make consistent progress toward your goal
-        </h1>
-        <br />
-        <br />
-        <br /> */}
-        <p className="mb-4 text-center">sup, glad to see you here. what is your work-in-progress?</p>
-        {/* <div
-          ref={divRef}
-          className="mb-4 text-center text-xl w-full sm:w-2/3 lg:w-2/5 xl:w-96 min-h-1 py-3 outline-none"
-          contentEditable
-          onKeyDown={(evt) => {
-            if (evt.code !== "Backspace" && (divRef.current?.textContent?.length || 0) >= WIP_MAX_CHARS) {
-              // evt.preventDefault()
-            }
-          }}
-          onPasteCapture={(evt) => {
-            evt.preventDefault()
-          [50rem]
-        /> */}
-        <form className="flex flex-col w-full items-center" onSubmit={onSubmit}>
-          <input
-            name="wip"
-            className="mb-4 bg-neutral-900 text-center text-l w-full sm:w-2/3 lg:w-3/5 xl:w-[50rem] min-h-1 py-3 px-2 outline-none rounded-md"
-            value={wipText}
-            maxLength={WIP_MAX_CHARS}
-            type='text'
-            autoFocus
-            required
-            onChange={(evt) => {
-              updateWip(evt.target.value)
-            }}
-            placeholder={randPlaceholder}
-          />
-          <p className="text-xs">
-            {wipText.length}/{WIP_MAX_CHARS}
-          </p>
-          <br />
-          <button
-            className="shadow-lg shadow-neutral-500/50 px-2 py-1 rounded-md bg-neutral-100 text-neutral-900 disabled:cursor-not-allowed disabled:opacity-80 disabled:shadow-none"
-            disabled={wipText.length === 0}
-            type="submit"
-          >
-            punch
-          </button>
-        </form>
-        <div className='mt-3 italic text-sm text-center leading-4'>
-          {txStatus}&nbsp;
-        </div>
+        {(wip) ? (
+          <>
+            {justSetGenesisWip ? (
+              <>
+                <p className="text-center">you’re all set. and you’re truly amazing.</p>
+                <p className="text-center mb-4">now get back to biz, work on it, and come back to make your first punch.</p>
+              </>
+            ) : (
+              <p className="text-center">hey again, how’s “{wip.text}” going?</p>
+            )}
+          </>
+        ) : (
+          <>
+            <p className="mb-4 text-center">sup, glad to see you here. what is your work-in-progress?</p>
+            <form className="flex flex-col w-full items-center" onSubmit={onSubmit}>
+              <input
+                name="wip"
+                className="mb-4 bg-neutral-900 text-center text-l w-full sm:w-5/6 lg:w-3/5 xl:w-[50rem] min-h-1 py-3 px-2 outline-none rounded-md"
+                value={wipText}
+                maxLength={WIP_TEXT_MAX_LEN}
+                type='text'
+                autoFocus
+                required
+                onChange={(evt) => {
+                  updateWip(evt.target.value)
+                }}
+                placeholder={randPlaceholder}
+              />
+              <p className="text-xs mb-6">
+                {wipText.length}/{WIP_TEXT_MAX_LEN}
+              </p>
+              <div className="mb-2 flex gap-2 justify-center" title="choose wisely.">
+                {Object.values(HOUSE_MAP).map(({ house: h }) => {
+                  const checked = h === house
+                  return (
+                    <div key={h}>
+                      <label
+                        className={clsx(
+                          "rounded-md block w-6 h-6 cursor-pointer",
+                          h === "spectreseek" && (checked ? "bg-red-500" : "bg-red-900"),
+                          h === "erevald" && (checked ? "bg-green-500" : "bg-green-900"),
+                          h === "gaudmire" && (checked ? "bg-yellow-500" : "bg-yellow-900"),
+                          h === "alterok" && (checked ? "bg-blue-500" : "bg-blue-900"),
+                          !checked && "opacity-85"
+                        )}
+                        htmlFor={h}
+                        title={h}
+                      />
+                      <input
+                        className="opacity-0 h-0 w-0 overflow-hidden absolute z-0"
+                        type="radio"
+                        id={h}
+                        name={h}
+                        value={h}
+                        checked={checked}
+                        onChange={(evt) => { updateHouse(evt.target.value as House) }}
+                      />
+                    </div>
+                  )
+                })}
+              </div>
+              <br />
+              <button
+                className="shadow-lg shadow-neutral-500/50 px-2 py-1 rounded-md bg-neutral-100 text-neutral-900 disabled:cursor-not-allowed disabled:opacity-80 disabled:shadow-none"
+                disabled={wipText.length === 0 || !house}
+                type="submit"
+              >
+                set wip
+              </button>
+            </form>
+            <div className='mt-3 italic text-sm text-center leading-4'>
+              {txStatus}&nbsp;
+            </div>
+          </>
+        )}
       </main>
     </>
   )
