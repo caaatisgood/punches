@@ -4,7 +4,7 @@ import { NetworkType } from '@airgap/beacon-types'
 import { Tezos } from '@/store/userStore'
 import { House } from '@/types'
 
-import { KT_ADDRESS } from '../config'
+import { KT_ADDRESS } from '@/config'
 
 let wallet: BeaconWallet
 

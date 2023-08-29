@@ -3,7 +3,8 @@ import { TezosToolkit } from '@taquito/taquito';
 import { BeaconWallet } from '@taquito/beacon-wallet';
 import { NetworkType } from '@airgap/beacon-types'
 
-import { KT_ADDRESS } from '../config'
+import { House } from '@/types';
+import { KT_ADDRESS } from '@/config'
 
 type OperationReturn = Promise<string | undefined>
 
@@ -22,6 +23,7 @@ type Punch = {
 
 interface UserStore {
   address?: string;
+  house?: House;
   wip?: Wip;
   punches?: Punch[];
   hasSyncedWip: boolean;
@@ -99,6 +101,7 @@ export const useUserStore = create<UserStore>((set, get) => ({
     set({
       address: undefined,
       wip: undefined,
+      house: undefined,
     })
   },
   syncWip: async () => {
@@ -133,6 +136,17 @@ export const useUserStore = create<UserStore>((set, get) => ({
       hasSyncedWip: true,
     })
     get().syncPunches()
+    Tezos.wallet.at(KT_ADDRESS)
+      .then((contract) => contract.contractViews.get_house(addr))
+      .then(viewResult => viewResult.executeView({ viewCaller: KT_ADDRESS }))
+      .then((result: House) => {
+        set({
+          house: result,
+        })
+      })
+      .catch((error) => {
+        console.log("failed to get_house ///", error)
+      })
   },
   syncPunches: async() => {
     set({

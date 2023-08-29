@@ -31,7 +31,7 @@ const PUNCH_PLACEHOLDERS = [
   "worked on getting more ppl on the app",
   "recorded the bridge",
   "edited the next vid",
-  "noted down plans for next week",
+  "noted down some build plans for the weekend",
   "struggled on a pesky bug",
   "read a blog about product iteration",
 ]
@@ -68,7 +68,18 @@ const Page = () => {
   const [justSetGenesisWip, setJustSetGenesisWip] = useState<boolean>(false)
   const [justPunch, setJustPunch] = useState<boolean>(false)
 
-  const { address, wip, sync, syncWip, hasSyncedWip, isSyncingWip, punches, syncPunches, isSyncingPunches } = useUserStore()
+  const {
+    address,
+    wip,
+    sync,
+    syncWip,
+    hasSyncedWip,
+    isSyncingWip,
+    punches,
+    syncPunches,
+    isSyncingPunches,
+    // house: chainHouse,
+  } = useUserStore()
 
   const lastPunchAt = punches?.[0]?.punchedAt
   const nextPunchAt = getNextPunchAt(lastPunchAt)
@@ -109,7 +120,7 @@ const Page = () => {
     }
     await callGenesisWip(wipText, house!, {
       onWaitingToBeConfirmed: () => {
-        setTxStatus("your wip is waiting to be confirmed...")
+        setTxStatus("confirming your wip, this would take about 15 sec, hang tight...")
       },
       onCompleted: async () => {
         resetWip()
@@ -124,7 +135,7 @@ const Page = () => {
     evt.preventDefault()
     await callPunch(punchText, {
       onWaitingToBeConfirmed: () => {
-        setTxStatus("your punch is waiting to be confirmed...")
+        setTxStatus("confirming your punch, this would take about 15 sec, hang tight...")
       },
       onCompleted: async () => {
         setPunchText("")
@@ -150,7 +161,7 @@ const Page = () => {
   const _renderContent = () => {
     if (isSyncingWip || isSyncingPunches || (address && !hasSyncedWip)) {
       return (
-        "brb..."
+        "loading stuff, brb..."
       )
     }
     if (justSetGenesisWip) {
@@ -202,7 +213,7 @@ const Page = () => {
       return (
         <>
           <p className="text-center">hey again, how’s <i>“{wip.text}”</i> going?</p>
-          <p className="text-center">what are the updates today?</p>
+          <p className="text-center">any new updates?</p>
           <br />
           <p className='mb-4 text-center text-sm'>
             leave a note if you like to
@@ -224,7 +235,7 @@ const Page = () => {
               {punchText.length}/{PUNCH_TEXT_MAX_LEN}
             </p>
             <button
-              className="shadow-lg shadow-neutral-500/50 px-2 py-1 rounded-md bg-neutral-100 text-neutral-900 disabled:cursor-not-allowed disabled:opacity-80 disabled:shadow-none"
+              className="shadow-lg shadow-neutral-500/50 px-2 py-0.5 rounded-md bg-neutral-100 text-neutral-900 disabled:cursor-not-allowed disabled:opacity-80 disabled:shadow-none"
               type="submit"
             >
               punch
@@ -288,7 +299,7 @@ const Page = () => {
           </div>
           <br />
           <button
-            className="shadow-lg shadow-neutral-500/50 px-2 py-1 rounded-md bg-neutral-100 text-neutral-900 disabled:cursor-not-allowed disabled:opacity-80 disabled:shadow-none"
+            className="shadow-lg shadow-neutral-500/50 px-2 py-0.5 rounded-md bg-neutral-100 text-neutral-900 disabled:cursor-not-allowed disabled:opacity-80 disabled:shadow-none"
             disabled={wipText.length === 0 || !house}
             type="submit"
           >
