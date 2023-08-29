@@ -372,6 +372,15 @@ const get_wip = (
 };
 
 // @view
+const get_house = (addr: address, store: Storage): string => {
+  const { punches, tickets, wips, houses, punch_count, punch_cd, wip_text_max_len, punch_text_max_len, house_set, admin, paused } = store;
+  return match((Big_map.find_opt(addr, houses)), {
+    Some: (house: House) => house,
+    None: () => failwith(Errors.not_found),
+  });
+};
+
+// @view
 const wen_can_punch = (
   { addr, id }: { addr: address, id: WipId },
   store: Storage

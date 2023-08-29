@@ -2,6 +2,7 @@ const kt_paused = "PAUSED";
 const not_allowed = "INSUFFICIENT_PERMISSION";
 const wip_not_found = "WIP_NOT_FOUND";
 const punch_not_found = "PUNCH_NOT_FOUND";
+const not_found = "NOT_FOUND";
 const punch_limit_exceeded = "PUNCH_LIMIT_EXCEEDED";
 const has_genesis_wip_already = "HAS_GENESIS_WIP_ALREADY";
 const has_no_genesis_wip = "HAS_NO_GENESIS_WIP";
