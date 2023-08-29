@@ -238,7 +238,7 @@ const Page = () => {
     }
     return (
       <>
-        <p className="mb-4 text-center">sup, glad to see you here. what is your work-in-progress?</p>
+        <p className="mb-4 text-center">sup, glad to see you here. what’s your work-in-progress?</p>
         <form className="flex flex-col w-full items-center" onSubmit={onSubmitGenesisWip}>
           <input
             name="wip"
