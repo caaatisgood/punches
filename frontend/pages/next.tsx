@@ -189,8 +189,14 @@ const Page = () => {
               )}
             </p>
             <p className="text-center">
-              you’re either working on wip or on your way to work on it.
+              you’re either working on your wip or on the way to work on your wip.
             </p>
+            {/* TODO: need more mood boosts here */}
+            {/* <p className="text-center">
+            </p>
+            <p className="text-center">
+              you got this.
+            </p> */}
           </>
         )
       }
