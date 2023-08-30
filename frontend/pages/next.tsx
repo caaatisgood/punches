@@ -69,9 +69,10 @@ const Page = () => {
     punches,
     syncPunches,
     isSyncingPunches,
-    isSyncingAllPunches,
-    hasSyncedAllPunches,
-    syncAllPunches,
+    // isSyncingAllPunches,
+    // hasSyncedAllPunches,
+    // syncAllPunches,
+    allPunches,
     // house: chainHouse,
   } = useUserStore()
 
@@ -188,7 +189,7 @@ const Page = () => {
           <>
             <div className='flex flex-row flex-1 w-full'>
               <div className='flex-1 flex items-center justify-center'>
-                <Sketch />
+                <Sketch punches={allPunches} />
               </div>
               <div className='flex-1 flex flex-col items-center justify-center basis-1/2 min-w-[300px]'>
                 <p className="mb-4 text-center">your next punch will be avail in</p>

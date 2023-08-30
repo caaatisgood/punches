@@ -1,4 +1,4 @@
-import { create } from 'zustand'
+import { StoreApi, UseBoundStore, create } from 'zustand'
 import { TezosToolkit } from '@taquito/taquito'
 import { BeaconWallet } from '@taquito/beacon-wallet'
 import { NetworkType } from '@airgap/beacon-types'
@@ -14,11 +14,12 @@ type Wip = {
   setAt: string;
   text: string;
 }
-type Punch = {
+export type Punch = {
   id: number;
   punchedAt: string;
   wipId: number;
   text: string | undefined;
+  house: House;
 }
 
 interface UserStore {
@@ -60,6 +61,11 @@ const initWallet = () => {
   return wallet
 }
 
+const afterSync = (state: UserStore) => {
+  state.syncPunches()
+  state.syncAllPunches()
+}
+
 if (typeof window !== "undefined") {
   const wallet = initWallet();
   wallet.getPKH().then(async address => {
@@ -68,7 +74,7 @@ if (typeof window !== "undefined") {
     })
     await useUserStore.getState().syncWip()
     if (useUserStore.getState().wip?.punchIds?.length) {
-      await useUserStore.getState().syncPunches()
+      afterSync(useUserStore.getState())
     }
   }).catch(() => {})
 }
@@ -100,7 +106,7 @@ export const useUserStore = create<UserStore>((set, get) => ({
     set({
       address,
     })
-    get().syncWip();
+    afterSync(get())
     return address
   },
   unsync: async () => {
@@ -203,4 +209,5 @@ const _adaptPunch = (punch: any): Punch => ({
   punchedAt: punch.punched_at,
   wipId: punch.wip_id.toNumber(),
   text: punch.text,
+  house: punch.house,
 })
