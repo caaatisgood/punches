@@ -31,16 +31,11 @@ const max_h = 800
 let margin = 12
 const max_ticks = 100
 
-const debug_offTheHook = true
+const debug_offTheHook = false
 
 const Sketch = ({ punches }: SketchProps) => {
   const [sketchKey, updateSketchKey] = useKey()
   let ticks = 0
-
-  const _rerender = () => {
-    ticks = 0
-    updateSketchKey()
-  }
 
   // edge case force re-render
   useEffect(() => {
@@ -54,7 +49,6 @@ const Sketch = ({ punches }: SketchProps) => {
     const canvas = p5.createCanvas(w, h);
     canvas.parent("canvasWrapper");
     p5.pixelDensity(3)
-    // p5.frameRate(1)
     p5.background(255);
 
     // configs
@@ -102,24 +96,21 @@ const Sketch = ({ punches }: SketchProps) => {
         p5.push()
           p5.translate(x, ydelta)
           p5.rotate(p5.PI * (p5.noise(ticks/5, i/10) - 0.5) * 0.3)
-          if (p5.random() < 0.05) {
-          } else {
-            if (p5.random() > 0.8) {
+          if (p5.random() < 0.95) {
+            const withThickerLine = p5.random() > 0.95
+            const withStrokeColor = withThickerLine || p5.random() > 0.8
+            if (withStrokeColor) {
               p5.stroke(strokeClr)
             }
             p5.line(0, 0, xLen + xLenDelta, 0)
-            if (p5.random() > 0.95) {
+            if (withThickerLine) {
               const thickness = p5.ceil(p5.random(1, 4))
               for (let j = 1; j < thickness; j++) {
                 let yshift = p5.random(1) * 0
-                p5.stroke(strokeClr)
                 p5.line(
                   0, yshift + j,
                   xLen + xLenDelta, yshift + j
                 )
-                // if (p5.random() > 0.5) {
-                //   p5.stroke(strokeClr)
-                // }
               }
             }
           }
@@ -130,7 +121,7 @@ const Sketch = ({ punches }: SketchProps) => {
   }
 
   return (
-    <div key={sketchKey} onClick={_rerender}>
+    <div key={sketchKey} onClick={updateSketchKey}>
       <div id="canvasWrapper" />
       <P5Sketch setup={setup} draw={draw} />
     </div>
