@@ -4,9 +4,11 @@ import clsx from 'clsx'
 import { House } from '@/types'
 import { HOUSE_MAP } from '@/constants/house'
 import { callGenesisWip, callPunch } from '@/utils/wallet'
+import ls from '@/utils/localStorage'
 import { useUserStore } from '@/store/userStore'
 import Header from '@/components/Header'
 import Countdown from '@/components/Countdown'
+import Sketch from '@/components/Sketch'
 
 const WIP_TEXT_MAX_LEN = 100
 const PUNCH_TEXT_MAX_LEN = 50
@@ -35,17 +37,6 @@ const PUNCH_PLACEHOLDERS = [
   "struggled on a pesky bug",
   "read a blog about product iteration",
 ]
-
-const ls = {
-  getItem: (key: string) =>
-    typeof window !== "undefined" && window.localStorage.getItem(`punches__${key}`),
-  setItem: (key: string, value: string) => {
-    typeof window !== "undefined" && window?.localStorage.setItem(`punches__${key}`, value)
-  },
-  removeItem: (key: string) => {
-    typeof window !== "undefined" && window?.localStorage.removeItem(`punches__${key}`)
-  },
-}
 
 const local = {
   getWip: () => ls.getItem("wip_text"),
@@ -78,6 +69,9 @@ const Page = () => {
     punches,
     syncPunches,
     isSyncingPunches,
+    isSyncingAllPunches,
+    hasSyncedAllPunches,
+    syncAllPunches,
     // house: chainHouse,
   } = useUserStore()
 
@@ -192,15 +186,22 @@ const Page = () => {
       if (isInPunchCd(lastPunchAt)) {
         return (
           <>
-            <p className="mb-4 text-center">your next punch will be avail in</p>
-            <p className="font-mono mb-4 text-center">
-              {nextPunchAt && (
-                <Countdown date={nextPunchAt} />
-              )}
-            </p>
-            <p className="text-center">
-              you’re either working on your wip or on the way to work on your wip.
-            </p>
+            <div className='flex flex-row flex-1 w-full'>
+              <div className='flex-1 flex items-center justify-center'>
+                <Sketch />
+              </div>
+              <div className='flex-1 flex flex-col items-center justify-center basis-1/2 min-w-[300px]'>
+                <p className="mb-4 text-center">your next punch will be avail in</p>
+                <p className="font-mono mb-4 text-center">
+                  {nextPunchAt && (
+                    <Countdown date={nextPunchAt} />
+                  )}
+                </p>
+                <p className="text-center">
+                  you’re either working on your wip or on the way to work on your wip.
+                </p>
+              </div>
+            </div>
             {/* TODO: need more mood boosts here */}
             {/* <p className="text-center">
             </p>

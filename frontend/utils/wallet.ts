@@ -1,6 +1,5 @@
 import { Tezos } from '@/store/userStore'
 import { House } from '@/types'
-
 import { KT_ADDRESS } from '@/config'
 
 type KtCallOptions = {
@@ -23,9 +22,9 @@ export const callGenesisWip = async (
     .then((result) => {
       if (result?.completed) {
         options?.onCompleted?.()
-        console.log(`tx correctly processed!
-          block: ${result.block.header.level}
-          chain id: ${result.block.chain_id}`);
+        console.log(
+          `tx correctly processed!\nblock: ${result.block.header.level}\nchain id: ${result.block.chain_id}`
+        );
       } else {
         options?.onFailed?.()
         alert(`oops, there's def something wrong here. sry bout that :/ please @caaatisgood`);
@@ -47,9 +46,9 @@ export const callPunch = async (
     .then((result) => {
       if (result?.completed) {
         options?.onCompleted?.()
-        console.log(`tx correctly processed!
-          block: ${result.block.header.level}
-          chain id: ${result.block.chain_id}`);
+        console.log(
+          `tx correctly processed!\nblock: ${result.block.header.level}\nchain id: ${result.block.chain_id}`
+        );
       } else {
         options?.onFailed?.()
         alert(`oops, there's def something wrong here. sry bout that :/ please @caaatisgood`);
