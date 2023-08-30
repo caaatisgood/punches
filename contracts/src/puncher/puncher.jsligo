@@ -12,11 +12,14 @@ type Wip = {
 
 type WipMap = map<WipId, Wip>;
 
+type House = string;
+
 type Punch = {
   id: nat,
   wip_id: nat,
   text: string,
   punched_at: timestamp,
+  house: House,
 };
 
 type Storage = {
@@ -33,7 +36,6 @@ type Storage = {
   paused: bool,
 };
 
-type House = string;
 type Text = string;
 
 type Parameter =
@@ -162,6 +164,10 @@ const punch = (
     },
     None: () => unit,
   });
+  const house: House = match(Big_map.find_opt(sender, houses), {
+    Some: (house: House) => house,
+    None: () => failwith(Errors.house_not_found),
+  });
   const punchId: nat = punch_count;
   const ticket_: ticket<nat> = Option.unopt(Tezos.create_ticket(punchId, 1 as nat));
   const [_, updatedTickets] = Big_map.get_and_update(punchId, Some(ticket_), tickets);
@@ -178,6 +184,7 @@ const punch = (
     wip_id: id,
     text,
     punched_at: Tezos.get_now(),
+    house,
   };
   const updatedPunches = Big_map.add(punchId, punch, punches);
   return {
