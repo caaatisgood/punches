@@ -73,7 +73,7 @@ if (typeof window !== "undefined") {
       address,
     })
     await useUserStore.getState().syncWip()
-    if (useUserStore.getState().wip?.punchIds?.length) {
+    if (useUserStore.getState().wip) {
       afterSync(useUserStore.getState())
     }
   }).catch(() => {})

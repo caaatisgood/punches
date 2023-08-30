@@ -73,7 +73,7 @@ const Page = () => {
     // hasSyncedAllPunches,
     // syncAllPunches,
     allPunches,
-    // house: chainHouse,
+    house: chainHouse,
   } = useUserStore()
 
   const lastPunchAt = punches?.[0]?.punchedAt
@@ -184,68 +184,85 @@ const Page = () => {
           </>
         )
       }
-      if (isInPunchCd(lastPunchAt)) {
-        return (
-          <>
-            <div className='flex flex-row flex-1 w-full'>
-              <div className='flex-1 flex items-center justify-center'>
-                <Sketch punches={allPunches} />
-              </div>
-              <div className='flex-1 flex flex-col items-center justify-center basis-1/2 min-w-[300px]'>
-                <p className="mb-4 text-center">your next punch will be avail in</p>
-                <p className="font-mono mb-4 text-center">
-                  {nextPunchAt && (
-                    <Countdown date={nextPunchAt} />
-                  )}
-                </p>
-                <p className="text-center">
-                  you’re either working on your wip or on the way to work on your wip.
-                </p>
-              </div>
-            </div>
-            {/* TODO: need more mood boosts here */}
-            {/* <p className="text-center">
-            </p>
-            <p className="text-center">
-              you got this.
-            </p> */}
-          </>
-        )
-      }
       return (
         <>
-          <p className="text-center">hey again, how’s <i>“{wip.text}”</i> going?</p>
-          <p className="text-center">any new updates?</p>
-          <br />
-          <p className='mb-4 text-center text-sm'>
-            leave a note if you like to
-          </p>
-          <form className="flex flex-col w-full items-center" onSubmit={onSubmitPunch}>
-            <input
-              name="punch"
-              className="mb-4 bg-neutral-900 text-center text-l w-full sm:w-4/5 lg:w-3/5 xl:w-[36rem] min-h-1 py-3 px-2 outline-none rounded-md"
-              value={punchText}
-              maxLength={PUNCH_TEXT_MAX_LEN}
-              type='text'
-              autoFocus
-              onChange={(evt) => {
-                setPunchText(evt.target.value)
-              }}
-              placeholder={randPunchPlaceholder}
-            />
-            <p className="text-xs mb-6">
-              {punchText.length}/{PUNCH_TEXT_MAX_LEN}
-            </p>
-            <button
-              className="shadow-lg shadow-neutral-500/50 px-2 py-0.5 rounded-md bg-neutral-100 text-neutral-900 disabled:cursor-not-allowed disabled:opacity-80 disabled:shadow-none"
-              type="submit"
-            >
-              punch
-            </button>
-          </form>
-          <div className='mt-3 italic text-sm text-center leading-4'>
-            {txStatus}&nbsp;
+          <div className='flex flex-row flex-1 w-full'>
+            <div className='flex-1 flex flex-col items-center justify-center basis-1/2 min-w-[300px]'>
+              {isInPunchCd(lastPunchAt) ? (
+                <>
+                  <p className="mb-4 text-center">your next punch will be avail in</p>
+                  <p className="font-mono mb-4 text-center">
+                    {nextPunchAt && (
+                      <Countdown date={nextPunchAt} />
+                    )}
+                  </p>
+                  <p className="text-center">
+                    you’re either working on your wip or on the way to work on your wip.
+                  </p>
+                </>
+              ) : (
+                <>
+                  <p className="text-center">hey again, how’s <i>“{wip.text}”</i> going?</p>
+                  <p className="text-center">any new updates?</p>
+                  <br />
+                  <p className='mb-4 text-center text-sm'>
+                    leave a note if you like to
+                  </p>
+                  <form className="flex flex-col w-full items-center" onSubmit={onSubmitPunch}>
+                    <input
+                      name="punch"
+                      className="mb-4 bg-neutral-900 text-center text-l w-full sm:w-4/5 lg:w-3/5 xl:w-[36rem] min-h-1 py-3 px-2 outline-none rounded-md"
+                      value={punchText}
+                      maxLength={PUNCH_TEXT_MAX_LEN}
+                      type='text'
+                      autoFocus
+                      onChange={(evt) => {
+                        setPunchText(evt.target.value)
+                      }}
+                      placeholder={randPunchPlaceholder}
+                    />
+                    <p className="text-xs">
+                      {punchText.length}/{PUNCH_TEXT_MAX_LEN}
+                    </p>
+                    {/* msg to those who havent punched yet */}
+                    {punches?.length === 0 && (
+                      <>
+                        <p className="mt-6">
+                          punch it to see a new viz with a bit more&nbsp;
+                          <span className={clsx(
+                            chainHouse === "spectreseek" && "text-red-500 bg-red-500",
+                            chainHouse === "erevald" && "text-green-500 bg-green-500",
+                            chainHouse === "gaudmire" && "text-yellow-500 bg-yellow-500",
+                            chainHouse === "alterok" && "text-blue-500 bg-blue-500",
+                          )}>{chainHouse}</span>
+                          &nbsp;vibe
+                        </p>
+                      </>
+                    )}
+                    <button
+                      className="mt-6 shadow-lg shadow-neutral-500/50 px-2 py-0.5 rounded-md bg-neutral-100 text-neutral-900 disabled:cursor-not-allowed disabled:opacity-80 disabled:shadow-none"
+                      type="submit"
+                    >
+                      punch
+                    </button>
+                  </form>
+                  <div className='mt-3 italic text-sm text-center leading-4'>
+                    {txStatus}&nbsp;
+                  </div>
+                </>
+              )}
+            </div>
+            <div className='flex-1 flex items-center justify-center flex-col'>
+              <Sketch punches={allPunches} />
+              <p className="text-sm italic">these are each and every punches from n&w s4 ppl</p>
+            </div>
           </div>
+          {/* TODO: need more mood boosts here */}
+          {/* <p className="text-center">
+          </p>
+          <p className="text-center">
+            you got this.
+          </p> */}
         </>
       )
     }
