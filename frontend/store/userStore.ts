@@ -61,7 +61,11 @@ const initWallet = () => {
   return wallet
 }
 
-const afterSync = (state: UserStore) => {
+const afterSync = async (state: UserStore) => {
+  await state.syncWip()
+  if (!useUserStore.getState().wip) {
+    return
+  }
   state.syncPunches()
   state.syncAllPunches()
 }
@@ -72,10 +76,7 @@ if (typeof window !== "undefined") {
     useUserStore.setState({
       address,
     })
-    await useUserStore.getState().syncWip()
-    if (useUserStore.getState().wip) {
-      afterSync(useUserStore.getState())
-    }
+    afterSync(useUserStore.getState())
   }).catch(() => {})
 }
 
