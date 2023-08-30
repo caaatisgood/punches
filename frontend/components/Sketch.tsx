@@ -1,4 +1,4 @@
-import { memo } from 'react'
+import { memo, useEffect } from 'react'
 import dynamic from 'next/dynamic'
 // import p5Types from 'p5'
 
@@ -15,10 +15,10 @@ type SketchProps = {
 }
 
 const COLOR_MAP: Record<House, string> = {
-  erevald: "green",
-  alterok: "blue",
-  gaudmire: "yellow",
-  spectreseek: "red",
+  erevald: "#16a34a",
+  alterok: "#2563eb",
+  gaudmire: "#eab308",
+  spectreseek: "#dc2626",
 }
 
 const SEED = 577 // char code sum of `n&ws4_0`
@@ -31,6 +31,8 @@ const max_h = 800
 let margin = 12
 const max_ticks = 100
 
+const debug_offTheHook = true
+
 const Sketch = ({ punches }: SketchProps) => {
   const [sketchKey, updateSketchKey] = useKey()
   let ticks = 0
@@ -40,6 +42,11 @@ const Sketch = ({ punches }: SketchProps) => {
     updateSketchKey()
   }
 
+  // edge case force re-render
+  useEffect(() => {
+    updateSketchKey()
+  }, [punches, updateSketchKey])
+
   const setup = (p5: any) => {
     p5.randomSeed(SEED)
     h = max_h
@@ -47,7 +54,7 @@ const Sketch = ({ punches }: SketchProps) => {
     const canvas = p5.createCanvas(w, h);
     canvas.parent("canvasWrapper");
     p5.pixelDensity(3)
-    // p5.frameRate(16)
+    // p5.frameRate(1)
     p5.background(255);
 
     // configs
@@ -60,12 +67,20 @@ const Sketch = ({ punches }: SketchProps) => {
   }
 
   const draw = (p5: any) => {
-    if (!punches?.length || ticks >= punches.length || ticks >= max_ticks) {
+    if (
+      (debug_offTheHook && ticks >= max_ticks) ||
+      (!debug_offTheHook && (
+        !punches?.length ||
+        ticks >= punches.length ||
+        ticks >= max_ticks))
+    ) {
       p5.noLoop()
       return
     }
 
-    const strokeClr = COLOR_MAP[punches[ticks].house]
+    const strokeClr = debug_offTheHook
+      ? p5.random(Object.values(COLOR_MAP))
+      : punches?.[ticks].house && COLOR_MAP[punches[ticks].house]
 
     let ybaseline = ticks * (hrange / (max_ticks + 1)) + p5.sin(ticks/5) * 17
     // let ybaseline = (noise(ticks/20)) * hrange
@@ -93,9 +108,18 @@ const Sketch = ({ punches }: SketchProps) => {
               p5.stroke(strokeClr)
             }
             p5.line(0, 0, xLen + xLenDelta, 0)
-            for (let j = 1; j < 5; j++) {
-              if (p5.random() > 0.95) {
-                p5.line(0, j, xLen + xLenDelta, j)
+            if (p5.random() > 0.95) {
+              const thickness = p5.ceil(p5.random(1, 4))
+              for (let j = 1; j < thickness; j++) {
+                let yshift = p5.random(1) * 0
+                p5.stroke(strokeClr)
+                p5.line(
+                  0, yshift + j,
+                  xLen + xLenDelta, yshift + j
+                )
+                // if (p5.random() > 0.5) {
+                //   p5.stroke(strokeClr)
+                // }
               }
             }
           }
