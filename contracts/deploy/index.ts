@@ -1,4 +1,6 @@
 import { InMemorySigner } from "@taquito/signer";
+import { LedgerSigner, HDPathTemplate, DerivationType } from '@taquito/ledger-signer';
+import TransportNodeHid from '@ledgerhq/hw-transport-node-hid';
 import { MichelsonMap, TezosToolkit } from "@taquito/taquito";
 import chalk from "chalk";
 import * as dotenv from "dotenv";
@@ -11,6 +13,7 @@ dotenv.config({ path: __dirname + "/.env" });
 const rpcUrl = process.env.RPC_URL; //"http://127.0.0.1:8732"
 const pk = process.env.PK;
 const adminAddr = process.env.ADMIN_ADDRESS;
+const withLedger = !!process.env.WITH_LEDGER;
 
 if (!pk && !rpcUrl) {
   console.log(
@@ -39,8 +42,6 @@ if (!adminAddr) {
 }
 
 const Tezos = new TezosToolkit(rpcUrl);
-const signer = new InMemorySigner(pk);
-Tezos.setProvider({ signer: signer });
 
 async function deployPuncher() {
   let factory_store = {
@@ -89,6 +90,26 @@ async function deployPuncher() {
 }
 
 async function deploy() {
+  if (withLedger) {
+    const transport = await TransportNodeHid.create();
+    const ledgerSigner = new LedgerSigner(
+      transport, //required
+      HDPathTemplate(1), // path optional (equivalent to "44'/1729'/1'/0'")
+      true, // prompt optional
+      DerivationType.ED25519 // derivationType optional
+    );
+    Tezos.setProvider({ signer: ledgerSigner });
+  } else {
+    const signer = new InMemorySigner(pk!);
+    Tezos.setProvider({ signer: signer });
+  }
+  const publicKey = await Tezos.signer.publicKey();
+  const publicKeyHash = await Tezos.signer.publicKeyHash();
+  console.table({
+    publicKey,
+    publicKeyHash,
+  });
+  
   await deployPuncher();
 }
 
