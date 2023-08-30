@@ -1,4 +1,4 @@
-import { StoreApi, UseBoundStore, create } from 'zustand'
+import { create } from 'zustand'
 import { TezosToolkit } from '@taquito/taquito'
 import { BeaconWallet } from '@taquito/beacon-wallet'
 import { NetworkType } from '@airgap/beacon-types'
