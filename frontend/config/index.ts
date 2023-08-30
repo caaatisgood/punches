@@ -1,1 +1,1 @@
-export const KT_ADDRESS = "KT1WByGgRJpTyYzUqCAtCmHeFaHdsYwJdZSJ";
+export const KT_ADDRESS = "KT1BkT78cete9Qb83u8b2fYJHDPg1YCQJdFT";
