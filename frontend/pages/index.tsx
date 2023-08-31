@@ -1,3 +1,5 @@
+import { Metadata } from 'next'
+import Head from 'next/head'
 import { useState, useEffect } from 'react'
 import clsx from 'clsx'
 
@@ -334,6 +336,10 @@ const Page = () => {
 
   return (
     <>
+      <Head>
+        <title>make consistent progress toward your goal | punches</title>
+        <link rel="icon" type="image/x-icon" href="/favicon.png" />
+      </Head>
       <Header />
       <main
         className={`font-sans flex min-h-screen flex-col items-center justify-center p-4`}
