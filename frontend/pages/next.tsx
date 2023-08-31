@@ -71,7 +71,7 @@ const Page = () => {
     isSyncingPunches,
     // isSyncingAllPunches,
     // hasSyncedAllPunches,
-    // syncAllPunches,
+    syncAllPunches,
     allPunches,
     house: chainHouse,
   } = useUserStore()
@@ -135,6 +135,7 @@ const Page = () => {
       onCompleted: async () => {
         setPunchText("")
         setJustPunch(true)
+        syncAllPunches()
         await syncPunches()
         setTxStatus("")
       },

@@ -1,5 +1,5 @@
 import { InMemorySigner } from "@taquito/signer";
-import { LedgerSigner, HDPathTemplate, DerivationType } from '@taquito/ledger-signer';
+import { LedgerSigner } from '@taquito/ledger-signer';
 import TransportNodeHid from '@ledgerhq/hw-transport-node-hid';
 import { MichelsonMap, TezosToolkit } from "@taquito/taquito";
 import chalk from "chalk";
@@ -10,9 +10,20 @@ import Puncher from "./compiled/puncher.json";
 
 dotenv.config({ path: __dirname + "/.env" });
 
-const rpcUrl = process.env.RPC_URL; //"http://127.0.0.1:8732"
-const pk = process.env.PK;
-const adminAddr = process.env.ADMIN_ADDRESS;
+const toMainnet = !!process.env.TO_MAINNET
+const {
+  rpcUrl,
+  pk,
+  adminAddr
+} = toMainnet ? {
+  rpcUrl: process.env.MAINNET_RPC_URL,
+  pk: process.env.MAINNET_PK,
+  adminAddr: process.env.MAINNET_ADMIN_ADDRESS,
+} : {
+  rpcUrl: process.env.GHOST_RPC_URL,
+  pk: process.env.GHOST_PK,
+  adminAddr: process.env.GHOST_ADMIN_ADDRESS,
+}
 const withLedger = !!process.env.WITH_LEDGER;
 
 if (!pk && !rpcUrl) {
@@ -27,17 +38,17 @@ if (!pk && !rpcUrl) {
 }
 
 if (!pk) {
-  missingEnvVarLog("PK");
+  missingEnvVarLog("(GHOST|MAINNET)_PK");
   process.exit(-1);
 }
 
 if (!rpcUrl) {
-  missingEnvVarLog("RPC_URL");
+  missingEnvVarLog("(GHOST|MAINNET)_RPC_URL");
   process.exit(-1);
 }
 
 if (!adminAddr) {
-  missingEnvVarLog("ADMIN_ADDRESS");
+  missingEnvVarLog("(GHOST|MAINNET)_ADMIN_ADDRESS");
   process.exit(-1);
 }
 
@@ -94,9 +105,6 @@ async function deploy() {
     const transport = await TransportNodeHid.create();
     const ledgerSigner = new LedgerSigner(
       transport, //required
-      HDPathTemplate(1), // path optional (equivalent to "44'/1729'/1'/0'")
-      true, // prompt optional
-      DerivationType.ED25519 // derivationType optional
     );
     Tezos.setProvider({ signer: ledgerSigner });
   } else {
