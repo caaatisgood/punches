@@ -59,7 +59,7 @@ const initWallet = () => {
   if (wallet) return wallet
   wallet = new BeaconWallet({
     name: 'punches',
-    // appUrl: '',
+    appUrl: process.env.NEXT_PUBLIC_SITE_URL,
     // iconUrl: '',
     preferredNetwork: DEFAULT_NETWORK,
   })
