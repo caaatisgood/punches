@@ -1,1 +1,1 @@
-export const KT_ADDRESS = "KT1BkT78cete9Qb83u8b2fYJHDPg1YCQJdFT";
+export const KT_ADDRESS = process.env.NEXT_PUBLIC_KT_ADDRESS;
