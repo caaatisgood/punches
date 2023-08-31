@@ -42,8 +42,14 @@ interface UserStore {
   debug: () => void;
 }
 
-const DEFAULT_RPC = 'https://ghostnet.ecadinfra.com'
-const DEFAULT_NETWORK = NetworkType.GHOSTNET
+const { DEFAULT_RPC, DEFAULT_NETWORK } = process.env.NEXT_PUBLIC_MAINNET
+  ? {
+    DEFAULT_RPC: 'https://mainnet.tezos.marigold.dev/',
+    DEFAULT_NETWORK: NetworkType.MAINNET,
+  } : {
+    DEFAULT_RPC: 'https://ghostnet.tezos.marigold.dev/',
+    DEFAULT_NETWORK: NetworkType.GHOSTNET,
+  }
 
 export const Tezos = new TezosToolkit(DEFAULT_RPC)
 

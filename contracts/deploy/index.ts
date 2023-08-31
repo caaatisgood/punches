@@ -1,3 +1,5 @@
+// import * as readline from 'node:readline/promises'
+// import { stdin as input, stdout as output } from 'node:process';
 import { InMemorySigner } from "@taquito/signer";
 import { LedgerSigner } from '@taquito/ledger-signer';
 import TransportNodeHid from '@ledgerhq/hw-transport-node-hid';
@@ -11,6 +13,12 @@ import Puncher from "./compiled/puncher.json";
 dotenv.config({ path: __dirname + "/.env" });
 
 const toMainnet = !!process.env.TO_MAINNET
+
+// if (toMainnet) {
+//   const rl = readline.createInterface({ input, output });
+//   await rl.question('this one is to the MAINNET, type anything to continue.');
+// }
+
 const {
   rpcUrl,
   pk,
