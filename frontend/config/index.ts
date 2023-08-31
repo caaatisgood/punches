@@ -1,1 +1,3 @@
-export const KT_ADDRESS = "KT1BkT78cete9Qb83u8b2fYJHDPg1YCQJdFT";
+export const KT_ADDRESS = process.env.NEXT_PUBLIC_MAINNET
+  ? process.env.NEXT_PUBLIC_MAINNET_KT_ADDRESS
+  : process.env.NEXT_PUBLIC_GHOST_KT_ADDRESS;

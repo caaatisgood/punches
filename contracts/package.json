@@ -11,6 +11,8 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
+    "@ledgerhq/hw-transport-node-hid": "^6.27.21",
+    "@taquito/ledger-signer": "^17.2.0",
     "@taquito/signer": "^17.2.0",
     "@taquito/taquito": "^17.1.1",
     "@taquito/utils": "^17.2.0",
