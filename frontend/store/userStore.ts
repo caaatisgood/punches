@@ -192,7 +192,7 @@ export const useUserStore = create<UserStore>((set, get) => ({
       .then(viewResult => viewResult.executeView({ viewCaller: KT_ADDRESS }))
       .then((result: any[]) => {
         set({
-          allPunches: result.map(_adaptPunch),
+          allPunches: result.map(_adaptPunch).reverse(),
           isSyncingAllPunches: false,
         })
       })

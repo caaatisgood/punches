@@ -9,6 +9,7 @@ import { useUserStore } from '@/store/userStore'
 import Header from '@/components/Header'
 import Countdown from '@/components/Countdown'
 import Sketch from '@/components/Sketch'
+import useKey from '@/utils/useKey'
 
 const WIP_TEXT_MAX_LEN = 100
 const PUNCH_TEXT_MAX_LEN = 50
@@ -58,6 +59,7 @@ const Page = () => {
   const [txStatus, setTxStatus] = useState<string | React.ReactNode>()
   const [justSetGenesisWip, setJustSetGenesisWip] = useState<boolean>(false)
   const [justPunch, setJustPunch] = useState<boolean>(false)
+  const [, forceRerender] = useKey()
 
   const {
     address,
@@ -170,31 +172,28 @@ const Page = () => {
       )
     }
     if (wip) {
-      if (justPunch) {
-        return (
-          <>
-            <p className="mb-4 text-center">
-              punched.<br />
-              another solid step on your wip.<br />
-              staying consistent is not always easy.<br />
-              but hey, you back on it today.<br />
-              so you should be proud of yourself.<br /><br />
-              aight see you tmr.
-            </p>
-            <button className="underline" onClick={punchContinue}>continue {"->"}</button>
-          </>
-        )
-      }
       return (
         <>
           <div className='flex flex-row flex-1 w-full'>
             <div className='flex-1 flex flex-col items-center justify-center basis-1/2 min-w-[300px]'>
-              {isInPunchCd(lastPunchAt) ? (
+              {justPunch ? (
+                <>
+                  <p className="mb-4 text-center">
+                    punched.<br /><br />
+                    another solid step on your wip.<br />
+                    staying consistent is not always easy.<br />
+                    but hey, you back on it today.<br />
+                    so you should be proud of yourself.<br /><br />
+                    see you at the next one?
+                  </p>
+                  <button className="underline" onClick={punchContinue}>continue {"->"}</button>
+                </>
+              ) : isInPunchCd(lastPunchAt) ? (
                 <>
                   <p className="mb-4 text-center">your next punch will be avail in</p>
                   <p className="font-mono mb-4 text-center">
                     {nextPunchAt && (
-                      <Countdown date={nextPunchAt} />
+                      <Countdown date={nextPunchAt} timesup={forceRerender} />
                     )}
                   </p>
                   <p className="text-center">
