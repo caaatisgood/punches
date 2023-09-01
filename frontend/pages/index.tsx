@@ -124,6 +124,7 @@ const Page = () => {
       onCompleted: async () => {
         resetWip()
         setJustSetGenesisWip(true)
+        syncAllPunches()
         await syncWip()
         setTxStatus("")
       },

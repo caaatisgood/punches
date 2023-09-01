@@ -43,7 +43,9 @@ const Sketch = ({ punches }: SketchProps) => {
   }, [punches, updateSketchKey])
 
   const setup = (p5: any) => {
-    p5.randomSeed(SEED)
+    if (!debug_offTheHook) {
+      p5.randomSeed(SEED)
+    }
     h = max_h
     w = h / 1.61803398875
     const canvas = p5.createCanvas(w, h);
