@@ -1,4 +1,3 @@
-import { Metadata } from 'next'
 import Head from 'next/head'
 import { useState, useEffect } from 'react'
 import clsx from 'clsx'
@@ -214,7 +213,7 @@ const Page = () => {
                   <form className="flex flex-col w-full items-center" onSubmit={onSubmitPunch}>
                     <input
                       name="punch"
-                      className="mb-4 bg-neutral-900 text-center text-l w-full sm:w-4/5 lg:w-3/5 xl:w-[36rem] min-h-1 py-3 px-2 outline-none rounded-md"
+                      className="mb-4 dark:bg-neutral-900 text-center text-l w-full sm:w-4/5 lg:w-3/5 xl:w-[36rem] min-h-1 py-3 px-2 outline-none rounded-md"
                       value={punchText}
                       maxLength={PUNCH_TEXT_MAX_LEN}
                       type='text'
@@ -243,7 +242,7 @@ const Page = () => {
                       </>
                     )}
                     <button
-                      className="mt-6 shadow-lg shadow-neutral-500/50 px-2 py-0.5 rounded-md bg-neutral-100 text-neutral-900 disabled:cursor-not-allowed disabled:opacity-80 disabled:shadow-none"
+                      className="mt-6 shadow-md shadow-neutral-500/50 px-2 py-0.5 rounded-md bg-neutral-100 text-neutral-900 disabled:cursor-not-allowed disabled:opacity-80 disabled:shadow-none"
                       type="submit"
                     >
                       punch
@@ -275,7 +274,7 @@ const Page = () => {
         <form className="flex flex-col w-full items-center" onSubmit={onSubmitGenesisWip}>
           <input
             name="wip"
-            className="mb-4 bg-neutral-900 text-center text-l w-full sm:w-5/6 lg:w-3/5 xl:w-[50rem] min-h-1 py-3 px-2 outline-none rounded-md"
+            className="mb-4 dark:bg-neutral-900 text-center text-l w-full sm:w-5/6 lg:w-3/5 xl:w-[50rem] min-h-1 py-3 px-2 outline-none rounded-md"
             value={wipText}
             maxLength={WIP_TEXT_MAX_LEN}
             type='text'
@@ -321,7 +320,7 @@ const Page = () => {
           </div>
           <br />
           <button
-            className="shadow-lg shadow-neutral-500/50 px-2 py-0.5 rounded-md bg-neutral-100 text-neutral-900 disabled:cursor-not-allowed disabled:opacity-80 disabled:shadow-none"
+            className="shadow-md shadow-neutral-500/20 px-2 py-0.5 rounded-md bg-neutral-100 text-neutral-900 disabled:cursor-not-allowed disabled:opacity-80 disabled:shadow-none"
             disabled={wipText.length === 0 || !house}
             type="submit"
           >

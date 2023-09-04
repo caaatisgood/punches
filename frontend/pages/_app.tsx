@@ -16,8 +16,8 @@ const novaMono = Nova_Mono({
 
 export default function App({ Component, pageProps }: AppProps) {
   return (
-    <main className={`${novaSlim.variable} ${novaMono.variable}`}>
+    <div className={`${novaSlim.variable} ${novaMono.variable}`}>
       <Component {...pageProps} />
-    </main>
+    </div>
   )
 }
