@@ -1,5 +1,6 @@
 import '@/styles/globals.css'
 import type { AppProps } from 'next/app'
+import { Analytics } from "@vercel/analytics/react";
 import { Nova_Slim, Nova_Mono } from 'next/font/google'
 
 const novaSlim = Nova_Slim({
@@ -18,6 +19,7 @@ export default function App({ Component, pageProps }: AppProps) {
   return (
     <div className={`${novaSlim.variable} ${novaMono.variable}`}>
       <Component {...pageProps} />
+      <Analytics />
     </div>
   )
 }
