@@ -165,7 +165,9 @@ const Page = () => {
   const _renderContent = () => {
     if (isSyncingWip || isSyncingPunches || (address && !hasSyncedWip)) {
       return (
-        "loading stuff, brb..."
+        <div className="flex-1 flex items-center">
+          loading stuff, brb...
+        </div>
       )
     }
     if (justSetGenesisWip) {
