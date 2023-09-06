@@ -20,7 +20,7 @@ const About = () => {
           punches helps you setup your wip. Everytime you come back to it, you make a “punch” - a check-in on your wip as a proof that you did something about it. Every punch will create a new iteration of the generated visual.
         </p>
         <p className="mb-2">
-          It’s more about what you did, not what you complete. Same mindset applies to how the visual intended to appeal. It keeps track of the process, not the end result.
+          It’s more about what you did, not what you completed. Same mindset applies to how the visual intended to appeal. It keeps track of the process, not the end result.
         </p>
         <p className="mb-2">
           Whatever you’re wip is, punches is here to motivate you and help you keep up the momentum.

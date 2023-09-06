@@ -354,7 +354,11 @@ const Page = () => {
         className={`font-sans flex min-h-screen flex-col items-center justify-center p-4`}
       >
         <Header />
-        {_renderContent()}
+        <div className="flex-1 flex items-center w-full">
+          <div className='w-full'>
+            {_renderContent()}
+          </div>
+        </div>
       </main>
     </>
   )
