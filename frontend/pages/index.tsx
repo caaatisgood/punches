@@ -29,6 +29,8 @@ const getNextPunchAt = (dateString: string | undefined) => {
 
 const WIP_PLACEHOLDERS = [
   "building an app to help ppl make consistent progress toward their goal",
+  "become a person who read regularly",
+  "creating video content about cool independent shops",
 ]
 const PUNCH_PLACEHOLDERS = [
   "half way through the toy flow",
@@ -51,6 +53,8 @@ const local = {
 
 const randWipPlaceholder = WIP_PLACEHOLDERS[Math.floor((Math.random() * WIP_PLACEHOLDERS.length))]
 const randPunchPlaceholder = PUNCH_PLACEHOLDERS[Math.floor((Math.random() * PUNCH_PLACEHOLDERS.length))]
+
+const titleStyle = "text-4xl leading-normal"
 
 const Page = () => {
   const [isCsrReady, setIsCsrReady] = useState(false)
@@ -204,16 +208,17 @@ const Page = () => {
                 </>
               ) : (
                 <>
-                  <p className="text-center">hey again, how’s <i>“{wip.text}”</i> going?</p>
-                  <p className="text-center">any new updates?</p>
-                  <br />
+                  <div className={clsx("mb-8 text-center")}>
+                    <p>hey again, how’s <i>“{wip.text}”</i> going?</p>
+                    <p>any new updates?</p>
+                  </div>
                   <p className='mb-4 text-center text-sm'>
-                    leave a note if you like to
+                    leave a note here
                   </p>
                   <form className="flex flex-col w-full items-center" onSubmit={onSubmitPunch}>
                     <input
                       name="punch"
-                      className="mb-4 dark:bg-neutral-900 text-center text-l w-full sm:w-4/5 lg:w-3/5 xl:w-[36rem] min-h-1 py-3 px-2 outline-none rounded-md"
+                      className="mb-4 dark:bg-neutral-900 text-center text-base w-full sm:w-4/5 lg:w-3/5 xl:w-[36rem] min-h-1 py-3 px-2 outline-none rounded-md"
                       value={punchText}
                       maxLength={PUNCH_TEXT_MAX_LEN}
                       type='text'
@@ -270,11 +275,14 @@ const Page = () => {
     }
     return (
       <>
-        <p className="mb-4 text-center">sup, glad to see you here. what’s your work-in-progress?</p>
+        <div className={clsx(titleStyle, "mb-8 text-center")}>
+          <p>sup, glad to see you here.</p>
+          <p>what’s your work-in-progress?</p>
+        </div>
         <form className="flex flex-col w-full items-center" onSubmit={onSubmitGenesisWip}>
           <input
             name="wip"
-            className="mb-4 dark:bg-neutral-900 text-center text-l w-full sm:w-5/6 lg:w-3/5 xl:w-[50rem] min-h-1 py-3 px-2 outline-none rounded-md"
+            className="mb-4 dark:bg-neutral-900 text-center text-base w-full sm:w-5/6 lg:w-3/5 xl:w-[50rem] min-h-1 py-3 px-2 outline-none rounded-md"
             value={wipText}
             maxLength={WIP_TEXT_MAX_LEN}
             type='text'
@@ -340,10 +348,10 @@ const Page = () => {
         <title>make consistent progress toward your goal | punches</title>
         <link rel="icon" type="image/x-icon" href="/favicon.png" />
       </Head>
-      <Header />
       <main
         className={`font-sans flex min-h-screen flex-col items-center justify-center p-4`}
       >
+        <Header />
         {_renderContent()}
       </main>
     </>
