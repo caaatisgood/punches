@@ -1,6 +1,6 @@
 import { memo, useState, useEffect, useCallback } from 'react'
 
-const Countdown = ({ date, timesup }: { date: Date, timesup: () => void }) => {
+const Countdown = ({ date, callback }: { date: Date, callback: () => void }) => {
   const calculateSecondsRemaining = useCallback(() => {
     const now = Date.now()
     const differenceInSeconds = Math.floor((date.getTime() - now) / 1000)
@@ -15,13 +15,13 @@ const Countdown = ({ date, timesup }: { date: Date, timesup: () => void }) => {
       setSecondsRemaining(updatedSecondsRemaining)
 
       if (updatedSecondsRemaining === 0) {
-        timesup()
+        callback()
         clearInterval(interval)
       }
     }, 1000)
 
     return () => clearInterval(interval)
-  }, [date, calculateSecondsRemaining, timesup])
+  }, [date, calculateSecondsRemaining, callback])
 
   const hours = Math.floor(secondsRemaining / 3600)
   const minutes = Math.floor((secondsRemaining % 3600) / 60)
