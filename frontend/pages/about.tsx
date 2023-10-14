@@ -8,6 +8,9 @@ const About = () => {
       <Header withSync={false} />
       <div className="max-w-md">
         <p className="mb-2">
+          <a href="https://x.com/caaatisgood/status/1703198801903640839?s=20" className="underline" target="_blank">90s demo vid</a>
+        </p>
+        <p className="mb-2">
           punches is a progress tracker with generative art visualization that helps you make consistent progress on what you are working on.
         </p>
         <p className="mb-2">
